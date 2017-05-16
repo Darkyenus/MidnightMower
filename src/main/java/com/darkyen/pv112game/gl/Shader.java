@@ -84,9 +84,18 @@ public class Shader {
     public final Uniform uniform(String name) {
         Uniform uniform = uniforms.get(name);
         if (uniform == null) {
-            uniform = new Uniform(name);
+            uniform = new Uniform(name, false);
             uniforms.put(name, uniform);
-        }
+        } else assert !uniform.block;
+        return uniform;
+    }
+
+    public final Uniform uniformBlock(String name) {
+        Uniform uniform = uniforms.get(name);
+        if (uniform == null) {
+            uniform = new Uniform(name, true);
+            uniforms.put(name, uniform);
+        } else assert uniform.block;
         return uniform;
     }
 
@@ -176,24 +185,39 @@ public class Shader {
 
     public final class Uniform {
         private final String name;
+        private final boolean block;
         private int location = LOCATION_UNKNOWN;
 
-        public Uniform(String name) {
+        private Uniform(String name, boolean block) {
             this.name = name;
+            this.block = block;
+        }
+
+        public int getProgram() {
+            return program;
         }
 
         public int getLocation() {
             if (location == LOCATION_UNKNOWN) {
-                location = Gdx.gl30.glGetUniformLocation(program, name);
-                if (location == -1) {
-                    LOG.warn("Uniform {} not found", name);
+                if (!block) {
+                    location = Gdx.gl30.glGetUniformLocation(program, name);
+                    if (location == -1) {
+                        LOG.warn("Uniform {} not found", name);
+                    }
+                } else {
+                    location = Gdx.gl30.glGetUniformBlockIndex(program, name);
+                    if (location == -1) {
+                        LOG.warn("Uniform block {} not found", name);
+                    }
                 }
+
             }
             return location;
         }
 
         /** Call while bound */
         public boolean set(int value) {
+            assert !block;
             final int location = getLocation();
             if (location < 0) return false;
             Gdx.gl30.glUniform1i(location, value);
@@ -202,6 +226,7 @@ public class Shader {
 
         /** Call while bound */
         public boolean set(float value) {
+            assert !block;
             final int location = getLocation();
             if (location < 0) return false;
             Gdx.gl30.glUniform1f(location, value);
@@ -210,6 +235,7 @@ public class Shader {
 
         /** Call while bound */
         public boolean set(float x, float y) {
+            assert !block;
             final int location = getLocation();
             if (location < 0) return false;
             Gdx.gl30.glUniform2f(location, x, y);
@@ -218,6 +244,7 @@ public class Shader {
 
         /** Call while bound */
         public boolean set(float x, float y, float z) {
+            assert !block;
             final int location = getLocation();
             if (location < 0) return false;
             Gdx.gl30.glUniform3f(location, x, y, z);
@@ -226,6 +253,7 @@ public class Shader {
 
         /** Call while bound */
         public boolean set(Vector3 value) {
+            assert !block;
             final int location = getLocation();
             if (location < 0) return false;
             Gdx.gl30.glUniform3f(location, value.x, value.y, value.z);
@@ -234,6 +262,7 @@ public class Shader {
 
         /** Call while bound */
         public boolean setRGB(Color value) {
+            assert !block;
             final int location = getLocation();
             if (location < 0) return false;
             Gdx.gl30.glUniform3f(location, value.r, value.g, value.b);
@@ -242,6 +271,7 @@ public class Shader {
 
         /** Call while bound */
         public boolean setRGBA(Color value) {
+            assert !block;
             final int location = getLocation();
             if (location < 0) return false;
             Gdx.gl30.glUniform4f(location, value.r, value.g, value.b, value.a);
@@ -250,6 +280,7 @@ public class Shader {
 
         /** Call while bound */
         public boolean set(Matrix3 value) {
+            assert !block;
             final int location = getLocation();
             if (location < 0) return false;
             Gdx.gl30.glUniformMatrix3fv(location, 1, false, value.getValues(), 0);
@@ -258,6 +289,7 @@ public class Shader {
 
         /** Call while bound */
         public boolean set(Matrix4 value) {
+            assert !block;
             final int location = getLocation();
             if (location < 0) return false;
             Gdx.gl30.glUniformMatrix4fv(location, 1, false, value.getValues(), 0);

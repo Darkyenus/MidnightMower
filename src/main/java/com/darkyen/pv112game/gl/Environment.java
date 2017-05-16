@@ -1,12 +1,12 @@
 package com.darkyen.pv112game.gl;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL30;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
+
+import java.nio.ByteBuffer;
 
 /**
  *
@@ -15,40 +15,80 @@ public final class Environment {
 
     private final Camera camera;
     private final Shader shader;
+    private final UniformBuffer environmentUniforms;
+    private final Shader.Uniform environmentBlock;
 
-    public final Color ambientLight = new Color(0.9f, 0.9f, 0.9f, 1f);
-    public final Array<PointLight> pointLights = new Array<>();
+    private final Color ambientLight = new Color(0.9f, 0.9f, 0.9f, 1f);
+    private final Array<PointLight> pointLights = new Array<>();
+    private boolean dirty = true;
 
     public Environment(Camera camera, Shader shader) {
         this.camera = camera;
         this.shader = shader;
+
+        environmentUniforms = new UniformBuffer();
+        environmentBlock = shader.uniformBlock("Environment");
     }
 
+    public void setAmbientLight(Color color) {
+        this.ambientLight.set(color);
+        dirty = true;
+    }
+
+    public Array<PointLight> getPointLights() {
+        dirty = true;
+        return pointLights;
+    }
+
+    private static final String[] environmentUniformNames = {"pointLightCount",  "ambientLight",
+            "pointLightPosition[0]", "pointLightColor[0]", "pointLightAttenuation[0]"};
+    private final int[] environmentUniformOffsets = new int[environmentUniformNames.length];
+
     public void begin() {
-        final GL30 gl = Gdx.gl30;
         shader.bind();
         shader.uniform("eye_position").set(camera.position);
         shader.uniform("projectionMat").set(camera.combined);
 
-        final int pointLightCount = Math.min(pointLights.size, 8);
-        shader.uniform("pointLightCount").set(pointLightCount);
-        final int pointLightLocation = shader.uniform("pointLights[0].position").getLocation();
-        if (pointLightLocation >= 0) {
-            final int pointLightSize = 3;
+        if (dirty) {
+            dirty = false;
+            final int[] offsets = this.environmentUniformOffsets;
+            final ByteBuffer data = environmentUniforms.prepareData(environmentBlock, environmentUniformNames, offsets, null);
+
+            final int pointLightCount = Math.min(pointLights.size, 8);
+            data.putInt(offsets[0], pointLightCount);
+            data.putFloat(offsets[1], ambientLight.r);
+            data.putFloat(offsets[1]+4, ambientLight.g);
+            data.putFloat(offsets[1]+8, ambientLight.b);
+
+            final int stridePos = 4*4;
+            final int strideCol = 4*4;
+            final int strideAtt = 4*4;
             for (int i = 0; i < pointLightCount; i++) {
                 final PointLight pointLight = pointLights.get(i);
-                gl.glUniform3f(pointLightLocation + i*pointLightSize, pointLight.position.x, pointLight.position.y, pointLight.position.z);
-                gl.glUniform3f(pointLightLocation + i*pointLightSize+1, pointLight.color.r, pointLight.color.g, pointLight.color.b);
-                gl.glUniform3f(pointLightLocation + i*pointLightSize+2, pointLight.attenuation.x, pointLight.attenuation.y, pointLight.attenuation.z);
+                data.putFloat(offsets[2] + i*stridePos, pointLight.position.x);
+                data.putFloat(offsets[2] + i*stridePos+4, pointLight.position.y);
+                data.putFloat(offsets[2] + i*stridePos+8, pointLight.position.z);
+
+                data.putFloat(offsets[3] + i*strideCol, pointLight.color.r);
+                data.putFloat(offsets[3] + i*strideCol+4, pointLight.color.g);
+                data.putFloat(offsets[3] + i*strideCol+8, pointLight.color.b);
+
+                data.putFloat(offsets[4] + i*strideAtt, pointLight.attenuation.x);
+                data.putFloat(offsets[4] + i*strideCol+4, pointLight.attenuation.y);
+                data.putFloat(offsets[4] + i*strideAtt+8, pointLight.attenuation.z);
             }
+
+            environmentUniforms.uploadData(data, true);
         }
+
+        environmentUniforms.bind(environmentBlock, 0);
     }
 
     private final Matrix4 draw_transform = new Matrix4();
 
     public void draw(Model model, Vector3 position) {
         final Matrix4 transform = draw_transform.setToTranslation(position);
-        model.draw(shader, transform, ambientLight);
+        model.draw(shader, transform);
     }
 
     public void end() {

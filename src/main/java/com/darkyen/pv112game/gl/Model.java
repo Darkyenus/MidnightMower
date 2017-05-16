@@ -44,22 +44,16 @@ public final class Model {
         throw new IllegalArgumentException("No mesh with id '"+meshId+"'");
     }
 
-    private static ModelMaterial getMaterial(Array<ModelMaterial> materials, String materialId) {
-        for (ModelMaterial material : materials) {
+    private static Material getMaterial(Array<Material> materials, String materialId) {
+        for (Material material : materials) {
             if (materialId.equals(material.id)) {
-                if (material.ambient == null) {
-                    material.ambient = Color.BLACK;
-                }
-                if (material.type != ModelMaterial.MaterialType.Phong && material.type != null) {
-                    LOG.warn("Material type {} not supported", material.type);
-                }
                 return material;
             }
         }
         throw new IllegalArgumentException("No material with id "+materialId);
     }
 
-    private void addNode(Array<ModelMaterial> materials, ModelNode modelNode, Node parent) {
+    private void addNode(Array<Material> materials, ModelNode modelNode, Node parent) {
         final Matrix4 transform = new Matrix4();//TODO Order of operations?
         if(modelNode.translation != null) transform.translate(modelNode.translation);
         if(modelNode.scale != null) transform.scale(modelNode.scale.x, modelNode.scale.y, modelNode.scale.z);
@@ -72,7 +66,7 @@ public final class Model {
                 final ModelNodePart modelNodePart = modelNode.parts[modelNodeI];
 
                 final MeshPart meshPart = getMeshPart(modelNode.meshId, modelNodePart.meshPartId);
-                final ModelMaterial material = getMaterial(materials, modelNodePart.materialId);
+                final Material material = getMaterial(materials, modelNodePart.materialId);
 
                 if (modelNodePart.bones != null && modelNodePart.bones.size != 0) {
                     LOG.warn("Bones are not supported");
@@ -93,6 +87,18 @@ public final class Model {
         this.meshes = new Mesh[modelData.meshes.size];
         this.meshIds = new String[modelData.meshes.size];
         this.meshParts = new MeshPart[modelData.meshes.size][];
+
+        // Prepare materials
+        final Array<Material> materials = new Array<>(modelData.materials.size);
+        for (int i = 0; i < modelData.materials.size; i++) {
+            final ModelMaterial modelMaterial = modelData.materials.get(i);
+            final Color ambient = modelMaterial.ambient == null ? new Color(modelMaterial.diffuse).mul(0.5f) : modelMaterial.ambient;
+            final Color diffuse = modelMaterial.diffuse;
+            final Color specular = modelMaterial.specular;
+            final float shininess = modelMaterial.specular == null ? 0f : modelMaterial.shininess;
+
+            materials.add(new Material(modelMaterial.id, ambient, diffuse, specular, shininess, null));
+        }
 
         // Prepare meshes
         for (int meshI = 0; meshI < modelData.meshes.size; meshI++) {
@@ -134,7 +140,7 @@ public final class Model {
 
         // Prepare nodes
         for (ModelNode node : modelData.nodes) {
-            addNode(modelData.materials, node, null);
+            addNode(materials, node, null);
         }
 
         this.nodes.sort();
@@ -144,7 +150,7 @@ public final class Model {
     private final Matrix4 draw_transform = new Matrix4();
     private final Matrix3 draw_normal = new Matrix3();
 
-    public void draw(Shader shader, Matrix4 transform, Color ambientLight) {
+    public void draw(Shader shader, Matrix4 transform) {
         Mesh lastBoundMesh = null;
         Node lastBoundNode = null;
 
@@ -167,11 +173,9 @@ public final class Model {
                 shader.uniform("normalMat").set(normalMat);
             }
 
-            final ModelMaterial material = part.material;
-            shader.uniform("material_ambientColor").set(material.ambient.r * ambientLight.r, material.ambient.g * ambientLight.g, material.ambient.b * ambientLight.b);
-            shader.uniform("material_diffuseColor").setRGB(material.diffuse);
-            shader.uniform("material_specularColor").setRGB(material.specular);
-            shader.uniform("material_shininess").set(material.shininess);
+            final Shader.Uniform materialBlock = shader.uniformBlock("Material");
+            final Material material = part.material;
+            material.bind(materialBlock, 1);
 
             final MeshPart meshPart = part.meshPart;
             mesh.render(meshPart.primitive, meshPart.indicesOffset, meshPart.indicesCount);
@@ -233,9 +237,9 @@ public final class Model {
     private static class NodePart implements Comparable<NodePart> {
         private final MeshPart meshPart;
         private final Node node;
-        private final ModelMaterial material;
+        private final Material material;
 
-        private NodePart(MeshPart meshPart, Node node, ModelMaterial material) {
+        private NodePart(MeshPart meshPart, Node node, Material material) {
             this.meshPart = meshPart;
             this.node = node;
             this.material = material;

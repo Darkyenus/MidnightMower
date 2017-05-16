@@ -2,18 +2,22 @@ package com.darkyen.pv112game;
 
 import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.*;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.g3d.utils.FirstPersonCameraController;
 import com.badlogic.gdx.graphics.profiling.GLErrorListener;
 import com.badlogic.gdx.graphics.profiling.GLProfiler;
-import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.darkyen.pv112game.font.Font;
 import com.darkyen.pv112game.font.GlyphLayout;
-import com.darkyen.pv112game.game.Models;
 import com.darkyen.pv112game.game.World;
-import com.darkyen.pv112game.gl.*;
+import com.darkyen.pv112game.gl.Environment;
+import com.darkyen.pv112game.gl.Shader;
+import com.darkyen.pv112game.gl.Skybox;
+import com.darkyen.pv112game.gl.SpriteBatch;
 
 /**
  *
@@ -45,11 +49,11 @@ public class Game implements ApplicationListener {
         sun.color.set(1f, 1f, 0.8f, 1f);
         sun.position.set(10_000f, 10_000f, 10_000f);
         sun.attenuation.setZero().x = 2f;
-        environment.pointLights.add(sun);
+        environment.getPointLights().add(sun);
 
         skybox = new Skybox();
 
-        world = new World(100, 100);
+        world = new World(/*100, 100*/1,2);
 
         cameraController = new FirstPersonCameraController(worldViewport.getCamera());
         worldViewport.getCamera().position.set(10, 10, 10);

@@ -193,7 +193,7 @@ public final class Mesh implements Disposable {
         assert offset + count <= getIndexCount();
         assert !vertexBufferDirty;
         assert !indexBufferDirty;
-        Gdx.gl20.glDrawElements(primitiveType, count, GL20.GL_UNSIGNED_SHORT, offset * 2);
+        Gdx.gl30.glDrawElements(primitiveType, count, GL20.GL_UNSIGNED_SHORT, offset * 2);
     }
 
     public void dispose () {

@@ -84,6 +84,7 @@ public class SpriteBatch {
         mesh.unbind();
         shader.unbind();
         lastBoundTexture = -1;
+        Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
     public void draw(float x, float y, float width, float height, float u, float v, float u2, float v2) {
