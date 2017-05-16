@@ -29,7 +29,7 @@ void main() {
 	vec3 diffuseLight = vec3(0.0);
 	vec3 specularLight = vec3(0.0);
 
-/*
+
 	for (int i = 0; i < pointLightCount; i++) {
 		PointLight light = pointLights[i];
 		vec3 directionToLight;
@@ -59,8 +59,7 @@ void main() {
 			float specularIntensity = baseDiffuseIntensity * pow(max(dot(reflected, directionToEye), 0.0), material_shininess);
         	specularLight += specularIntensity * light.color;
 		}
-
-	}*/
+	}
 
     vec3 color = material_ambientColor
             + diffuseLight * material_diffuseColor
