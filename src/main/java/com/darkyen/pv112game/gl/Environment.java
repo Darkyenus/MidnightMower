@@ -17,7 +17,6 @@ public final class Environment {
     private final Shader shader;
 
     public final Color ambientLight = new Color(0.9f, 0.9f, 0.9f, 1f);
-    public float ambientLightIntensity = 1f;
     public final Array<PointLight> pointLights = new Array<>();
 
     public Environment(Camera camera, Shader shader) {
@@ -31,10 +30,7 @@ public final class Environment {
         shader.uniform("eye_position").set(camera.position);
         shader.uniform("projectionMat").set(camera.combined);
 
-        shader.uniform("ambientLight").setRGB(ambientLight);
-        shader.uniform("ambientLightIntensity").set(ambientLightIntensity);
-
-        final int pointLightCount = Math.min(pointLights.size, 16);
+        final int pointLightCount = Math.min(pointLights.size, 8);
         shader.uniform("pointLightCount").set(pointLightCount);
         final int pointLightLocation = shader.uniform("pointLights[0].position").getLocation();
         if (pointLightLocation >= 0) {
@@ -52,7 +48,7 @@ public final class Environment {
 
     public void draw(Model model, Vector3 position) {
         final Matrix4 transform = draw_transform.setToTranslation(position);
-        model.draw(shader, transform);
+        model.draw(shader, transform, ambientLight);
     }
 
     public void end() {

@@ -144,7 +144,7 @@ public final class Model {
     private final Matrix4 draw_transform = new Matrix4();
     private final Matrix3 draw_normal = new Matrix3();
 
-    public void draw(Shader shader, Matrix4 transform) {
+    public void draw(Shader shader, Matrix4 transform, Color ambientLight) {
         Mesh lastBoundMesh = null;
         Node lastBoundNode = null;
 
@@ -168,7 +168,7 @@ public final class Model {
             }
 
             final ModelMaterial material = part.material;
-            shader.uniform("material_ambientColor").setRGB(material.ambient);
+            shader.uniform("material_ambientColor").set(material.ambient.r * ambientLight.r, material.ambient.g * ambientLight.g, material.ambient.b * ambientLight.b);
             shader.uniform("material_diffuseColor").setRGB(material.diffuse);
             shader.uniform("material_specularColor").setRGB(material.specular);
             shader.uniform("material_shininess").set(material.shininess);

@@ -12,6 +12,7 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.darkyen.pv112game.font.Font;
 import com.darkyen.pv112game.font.GlyphLayout;
 import com.darkyen.pv112game.game.Models;
+import com.darkyen.pv112game.game.World;
 import com.darkyen.pv112game.gl.*;
 
 /**
@@ -25,6 +26,7 @@ public class Game implements ApplicationListener {
     private Environment environment;
     private Skybox skybox;
 
+    private World world;
     private FirstPersonCameraController cameraController;
 
     private SpriteBatch uiBatch;
@@ -38,15 +40,16 @@ public class Game implements ApplicationListener {
         GLProfiler.listener = GLErrorListener.LOGGING_LISTENER;
 
         environment = new Environment(worldViewport.getCamera(), new Shader(Gdx.files.internal("shaders/world-vert.glsl"), Gdx.files.internal("shaders/world-frag.glsl")));
-        environment.ambientLightIntensity = 0.7f;
 
         final Environment.PointLight sun = new Environment.PointLight();
         sun.color.set(1f, 1f, 0.8f, 1f);
-        sun.position.set(100f, 100f, 100f);
+        sun.position.set(10_000f, 10_000f, 10_000f);
         sun.attenuation.setZero().x = 2f;
         environment.pointLights.add(sun);
 
         skybox = new Skybox();
+
+        world = new World(100, 100);
 
         cameraController = new FirstPersonCameraController(worldViewport.getCamera());
         worldViewport.getCamera().position.set(10, 10, 10);
@@ -80,12 +83,7 @@ public class Game implements ApplicationListener {
 
         environment.begin();
 
-        for (int i = 0; i < Models.LOADED_MODELS.size; i++) {
-            final Model model = Models.LOADED_MODELS.get(i);
-            final Vector3 position = new Vector3(i % 10, 0, i / 10);
-            position.scl(3f);
-            environment.draw(model, position);
-        }
+        world.draw(environment);
 
         environment.end();
 

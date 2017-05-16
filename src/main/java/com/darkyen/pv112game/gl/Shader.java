@@ -217,6 +217,14 @@ public class Shader {
         }
 
         /** Call while bound */
+        public boolean set(float x, float y, float z) {
+            final int location = getLocation();
+            if (location < 0) return false;
+            Gdx.gl30.glUniform3f(location, x, y, z);
+            return true;
+        }
+
+        /** Call while bound */
         public boolean set(Vector3 value) {
             final int location = getLocation();
             if (location < 0) return false;

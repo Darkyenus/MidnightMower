@@ -11,6 +11,7 @@ public class Main {
         Lwjgl3ApplicationConfiguration configuration = new Lwjgl3ApplicationConfiguration();
         configuration.useOpenGL3(true, 3, 3);
         configuration.setResizable(true);
+        configuration.useVsync(false);
         configuration.setTitle("PV112 Game");
 
         new Lwjgl3Application(new Game(), configuration);
