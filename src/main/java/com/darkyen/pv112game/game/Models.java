@@ -125,5 +125,17 @@ public class Models {
     public static final Model WoodFenceBroken01 = load("Wood_Fence_Broken_01");
     public static final Model WoodFenceGate01 = load("Wood_Fence_Gate_01");
     //endregion
+
+    //region Terrain
+    public static final Model GrassTile = load("Tile");
+    public static final Model Cliff = load("Cliff");
+    public static final Model CliffCorner = load("CliffCorner");
+    public static final Model Overhang = load("Overhang");
+    public static final Model OverhangCorner = load("OverhangCorner");
+    //endregion
+
+    //region Game
+    public static final Model LawnMower = load("LawnMower");
+    //endregion
     
 }

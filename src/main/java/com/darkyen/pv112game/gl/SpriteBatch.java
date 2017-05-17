@@ -3,11 +3,12 @@ package com.darkyen.pv112game.gl;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
+import com.badlogic.gdx.utils.Disposable;
 
 /**
  *
  */
-public class SpriteBatch {
+public class SpriteBatch implements Disposable {
 
     public static final float WHITE = Color.WHITE.toFloatBits();
 
@@ -139,4 +140,9 @@ public class SpriteBatch {
         spriteCount = totalSpriteCount;
     }
 
+    @Override
+    public void dispose() {
+        this.mesh.dispose();
+        this.shader.dispose();
+    }
 }

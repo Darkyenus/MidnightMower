@@ -1,17 +1,19 @@
 package com.darkyen.pv112game.gl;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.Disposable;
 
 import java.nio.ByteBuffer;
 
 /**
  *
  */
-public final class Environment {
+public final class Environment implements Disposable {
 
     private final Camera camera;
     private final Shader shader;
@@ -22,9 +24,9 @@ public final class Environment {
     private final Array<PointLight> pointLights = new Array<>();
     private boolean dirty = true;
 
-    public Environment(Camera camera, Shader shader) {
+    public Environment(Camera camera) {
         this.camera = camera;
-        this.shader = shader;
+        this.shader = new Shader(Gdx.files.internal("shaders/world-vert.glsl"), Gdx.files.internal("shaders/world-frag.glsl"));
 
         environmentUniforms = new UniformBuffer();
         environmentBlock = shader.uniformBlock("Environment");
@@ -91,8 +93,18 @@ public final class Environment {
         model.draw(shader, transform);
     }
 
+    public void draw(Model model, Vector3 position, float yDegrees) {
+        final Matrix4 transform = draw_transform.setToTranslation(position).rotate(Vector3.Y, yDegrees);
+        model.draw(shader, transform);
+    }
+
     public void end() {
         shader.unbind();
+    }
+
+    public void dispose() {
+        end();
+        shader.dispose();
     }
 
     public static final class PointLight {

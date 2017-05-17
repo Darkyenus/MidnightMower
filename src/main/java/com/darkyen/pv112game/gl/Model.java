@@ -167,8 +167,8 @@ public final class Model {
             if (part.node != lastBoundNode) {
                 lastBoundNode = part.node;
 
-                final Matrix4 modelMat = draw_transform.set(part.node.transform).mul(transform);
-                shader.uniform("modelMat").set(modelMat);//TODO Order of multiplication?
+                final Matrix4 modelMat = draw_transform.set(transform).mul(part.node.transform);
+                shader.uniform("modelMat").set(modelMat);
                 final Matrix3 normalMat = draw_normal.set(modelMat).inv().transpose();
                 shader.uniform("normalMat").set(normalMat);
             }

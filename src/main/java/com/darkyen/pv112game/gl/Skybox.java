@@ -2,18 +2,20 @@ package com.darkyen.pv112game.gl;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.*;
+import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 /**
  * Shader based skybox
  */
-public class Skybox {
+public class Skybox implements Disposable {
 
     private final Shader shader;
-    private final Mesh screenMesh = new Mesh(new VertexAttributes(new VertexAttribute(VertexAttributes.Usage.Position, 2, "a_position")), true, 4, true, 4);
+    private final Mesh screenMesh;
 
     public Skybox() {
         this.shader = new Shader(Gdx.files.internal("shaders/skybox-vert.glsl"), Gdx.files.internal("shaders/skybox-frag.glsl"));
+        screenMesh = new Mesh(new VertexAttributes(new VertexAttribute(VertexAttributes.Usage.Position, 2, "a_position")), true, 4, true, 4);
         screenMesh.setVertices(new float[] {
                 -1f, -1f,
                 1f, -1f,
@@ -45,5 +47,10 @@ public class Skybox {
         shader.unbind();
 
         gl.glDepthMask(true);
+    }
+
+    public void dispose() {
+        shader.dispose();
+        screenMesh.dispose();
     }
 }

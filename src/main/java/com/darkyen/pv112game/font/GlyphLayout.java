@@ -447,6 +447,7 @@ public class GlyphLayout {
 
 	/**
 	 * @deprecated Untested */
+	@Deprecated
     public int getClosestIndexTo(float x, float y) {
         final Array<GlyphRun> runs = this.runs;
         if(runs.size == 0)return 0;
