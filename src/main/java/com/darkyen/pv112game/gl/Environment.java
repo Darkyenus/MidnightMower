@@ -94,7 +94,17 @@ public final class Environment implements Disposable {
     }
 
     public void draw(Model model, Vector3 position, float yDegrees) {
-        final Matrix4 transform = draw_transform.setToTranslation(position).rotate(Vector3.Y, yDegrees);
+        final Matrix4 transform = draw_transform.idt();
+        transform.translate(position);
+        transform.rotate(Vector3.Y, yDegrees);
+        model.draw(shader, transform);
+    }
+
+    public void draw(Model model, Vector3 position, float yDegrees, float scale) {
+        final Matrix4 transform = draw_transform.idt();
+        transform.translate(position);
+        transform.rotate(Vector3.Y, yDegrees);
+        transform.scale(scale, scale, scale);
         model.draw(shader, transform);
     }
 

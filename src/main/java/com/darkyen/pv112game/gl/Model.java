@@ -54,10 +54,10 @@ public final class Model {
     }
 
     private void addNode(Array<Material> materials, ModelNode modelNode, Node parent) {
-        final Matrix4 transform = new Matrix4();//TODO Order of operations?
-        if(modelNode.translation != null) transform.translate(modelNode.translation);
+        final Matrix4 transform = new Matrix4();
         if(modelNode.scale != null) transform.scale(modelNode.scale.x, modelNode.scale.y, modelNode.scale.z);
         if(modelNode.rotation != null) transform.rotate(modelNode.rotation);
+        if(modelNode.translation != null) transform.translate(modelNode.translation);
 
         final Node node = new Node(modelNode.id, parent, transform);
 
