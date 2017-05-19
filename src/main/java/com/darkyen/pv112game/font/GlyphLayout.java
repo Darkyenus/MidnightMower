@@ -190,7 +190,7 @@ public class GlyphLayout {
 				}
 
 				// Process the tag
-				if (!handleColorTag(str, tagContentStart, tagContentEnd - tagContentStart)) {
+				if (!handleColorTag(str, tagContentStart, tagContentEnd - tagContentStart, color.a)) {
 					break markup;
 				}
 
@@ -234,6 +234,7 @@ public class GlyphLayout {
 		final int runsSize = runs.size;
 
 		if ((hAlign & Align.left) == 0) { // Not left aligned, so must be center or right aligned.
+			final float alignTargetWidth = targetWidth == Float.POSITIVE_INFINITY ? width : targetWidth;
 			final boolean center = (hAlign & Align.center) != 0;
 			float lineWidth = 0;
 			int currentLine = -1;
@@ -242,7 +243,7 @@ public class GlyphLayout {
 				final GlyphRun r = runs.get(i);
 				if (r.lineIndex != currentLine) {
 					currentLine = r.lineIndex;
-					float shift = targetWidth - lineWidth;
+					float shift = alignTargetWidth - lineWidth;
 					if (center) shift /= 2;
 					while (lineStart < i)
 						runs.get(lineStart++).x += shift;
@@ -250,42 +251,17 @@ public class GlyphLayout {
 				}
 				lineWidth = Math.max(lineWidth, r.x + r.width);
 			}
-			float shift = targetWidth - lineWidth;
+			float shift = alignTargetWidth - lineWidth;
 			if (center) shift /= 2;
 			while (lineStart < runsSize)
 				runs.get(lineStart++).x += shift;
 		}
 	}
 
-	private void clearColorStack () {
-		final Array<Color> colorStack = this.colorStack;
-		colorPool.freeAll(colorStack);
-		this.colorStack.clear();
-	}
-
-	private boolean popColorStack () {
-		final Array<Color> colorStack = this.colorStack;
-		if (colorStack.size > 0) {
-			colorPool.free(colorStack.pop());
-			return true;
-		} else
-			return false;
-	}
-
 	private void pushColorStack (float r, float g, float b, float a) {
 		final Color color = colorPool.obtain();
 		color.set(r, g, b, a);
 		colorStack.add(color);
-	}
-
-	private void pushColorStack (int c) {
-		final Color color = colorPool.obtain();
-		Color.rgba8888ToColor(color, c);
-		colorStack.add(color);
-	}
-
-	private void pushColorStack (Color nonPooledColor) {
-		pushColorStack(nonPooledColor.r, nonPooledColor.g, nonPooledColor.b, nonPooledColor.a);
 	}
 
 	private int hexCharValue (char c) {
@@ -307,18 +283,23 @@ public class GlyphLayout {
 		return (hexCharValue(c1) << 4 | hexCharValue(c2)) / 255f;
 	}
 
-	private boolean handleColorTag (CharSequence tagText, int offset, int length) {
+	private boolean handleColorTag (CharSequence tagText, int offset, int length, float defaultAlpha) {
 		if (length == 0) {
 			// Empty tag, pop
-			return popColorStack();
+			if (colorStack.size > 0) {
+                colorPool.free(colorStack.pop());
+                return true;
+            } else
+                return false;
 		} else if (length == 1 && tagText.charAt(offset) == '~') {
 			// [~] = pop all
-			clearColorStack();
+			colorPool.freeAll(colorStack);
+			colorStack.clear();
 			return true;
 		} else if (tagText.charAt(offset) == '#') {
 			offset++;
 			length--;
-			float r, g, b, a = 1f;
+			float r, g, b, a = defaultAlpha;
 			switch (length) {
 			case 4:
 				a = hexToFloat(tagText.charAt(offset + 3));
@@ -346,7 +327,7 @@ public class GlyphLayout {
 			if (color == null) {
 				return false;
 			} else {
-				pushColorStack(color);
+				pushColorStack(color.r, color.g, color.b, color.a == 1f ? defaultAlpha : color.a);
 				return true;
 			}
 		}

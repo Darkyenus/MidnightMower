@@ -26,9 +26,16 @@ void main() {
     vec2 pos = (v_position * screenDimensions) / screenDimensions.y;
     vec3 ray = camera * normalize(vec3(pos.xy, fovFactor));
 
+// Day
+/*
 	GradientPoint low = GradientPoint(vec3(78, 102, 76), -1.0);
 	GradientPoint mid = GradientPoint(vec3(115, 130, 133), -0.5);
 	GradientPoint high = GradientPoint(vec3(41, 162, 255), 1.0);
+*/
+	// Night
+	GradientPoint low = GradientPoint(vec3(30, 50, 30), -1.0);
+    GradientPoint mid = GradientPoint(vec3(10, 15, 10), -0.5);
+    GradientPoint high = GradientPoint(vec3(3, 3, 5), 1.0);
 
 	float a = ray.y;
 	vec3 color;
