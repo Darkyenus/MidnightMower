@@ -70,8 +70,17 @@ public class GameState extends State {
     private final Sound soundIdle = Gdx.audio.newSound(Gdx.files.internal("sounds/lawnmower_idle.ogg"));
     private long soundIdleLoopId = -1;
     private final Sound soundStart = Gdx.audio.newSound(Gdx.files.internal("sounds/lawnmower_start.ogg"));
+    private final Sound soundEnd = Gdx.audio.newSound(Gdx.files.internal("sounds/lawnmower_end.ogg"));
+
+    private final Sound[] grassCut = {
+            Gdx.audio.newSound(Gdx.files.internal("sounds/grass-cut-01.ogg")),
+            Gdx.audio.newSound(Gdx.files.internal("sounds/grass-cut-02.ogg")),
+            Gdx.audio.newSound(Gdx.files.internal("sounds/grass-cut-03.ogg")),
+            Gdx.audio.newSound(Gdx.files.internal("sounds/grass-cut-04.ogg")),
+    };
 
     private boolean engineRunning = false;
+    private float levelTime = 0f;
 
     public GameState(Game game) {
         super(game);
@@ -91,16 +100,6 @@ public class GameState extends State {
     }
 
     @Override
-    public void end() {
-        game.clearSchedule();
-        if (soundIdleLoopId != -1) {
-            soundStart.stop(soundIdleLoopId);
-            soundIdleLoopId = -1;
-        }
-        game.disableHeadlights();
-    }
-
-    @Override
     public void postRender() {
         cutGrassParticles.draw(game.getWorldViewport().getCamera());
     }
@@ -108,12 +107,22 @@ public class GameState extends State {
     private static final int PARTICLES_PER_GRASS = 60;
     private float nextStrayParticle = 0f;
 
+    private void playGrassCutEffect() {
+        particlesRemaining += PARTICLES_PER_GRASS;
+        grassCut[MathUtils.random.nextInt(grassCut.length)].play(1f, 1f + MathUtils.random(-0.05f, 0.1f), 0f);
+    }
+
     @Override
     public void update(float delta) {
         final Level level = game.getLevel();
 
         if (!game.isPaused()) {
+
+            cutGrassParticles.update(delta);
+
             if (engineRunning) {
+                levelTime  += delta;
+
                 final boolean forward = Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP);
                 final boolean backward = Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN);
                 if (forward ^ backward) {
@@ -121,7 +130,7 @@ public class GameState extends State {
                     final Vector2 movement = new Vector2(0f, level.playerSpeed * delta * (forward ? 1f : -1f)).rotate(-level.playerAngle);
                     final Level.CollisionData collisionData = level.playerMove(movement);
                     if (collisionData.grassCut) {
-                        particlesRemaining += PARTICLES_PER_GRASS;
+                        playGrassCutEffect();
                     }
                     if (collisionData.collision != Level.CollisionData.NO_COLLISION) {
                         // Slide
@@ -132,7 +141,7 @@ public class GameState extends State {
                             movement.y = 0f;
                         }
                         if (level.playerMove(movement).grassCut) {
-                            particlesRemaining += PARTICLES_PER_GRASS;
+                            playGrassCutEffect();
                         }
                     }
                 }
@@ -145,7 +154,6 @@ public class GameState extends State {
                     level.playerAngle += left ? turnAngle : -turnAngle;
                 }
 
-                cutGrassParticles.update(delta);
                 if (particlesRemaining > 0) {
                     timeToNextParticle -= delta;
                     while (timeToNextParticle < 0f) {
@@ -159,6 +167,25 @@ public class GameState extends State {
                 while (nextStrayParticle < 0) {
                     cutGrassParticles.spawn(1);
                     nextStrayParticle += MathUtils.random() * 0.9f;
+                }
+
+                if (level.remainingGrass == 0) {
+                    engineRunning = false;
+
+                    game.schedule(1f, () -> {
+                        soundEnd.play();
+                        game.startCrickets();
+                        soundIdle.stop(soundIdleLoopId);
+                        soundIdleLoopId = -1;
+
+                        game.schedule(0.2f, () -> {
+                            game.disableHeadlights();
+
+                            game.schedule(2f, () -> {
+                                //TODO next level
+                            });
+                        });
+                    });
                 }
             }
         }
@@ -199,10 +226,18 @@ public class GameState extends State {
         uiBatch.begin(uiViewport.getCamera(), true);
         if (debugDraw) {
             glyphLayout.setText("FPS: "+Gdx.graphics.getFramesPerSecond()+"\nPos: "+level.playerPos+"\nTile: "+level.playerTileX+" "+level.playerTileY+"\nA: "+level.playerAngle+"\nGrass: "+level.remainingGrass+"\nPart: "+cutGrassParticles.getParticleCount(), Color.WHITE, Gdx.graphics.getWidth(), Align.left);
+            glyphLayout.draw(uiBatch, 0, Gdx.graphics.getHeight());
         } else {
-            glyphLayout.setText("Remaining: "+level.remainingGrass, Color.WHITE, Gdx.graphics.getWidth(), Align.left);
+            if (level.remainingGrass != 0) {
+                glyphLayout.setText("Remaining: " + level.remainingGrass, Color.WHITE, 0f, Align.left);
+                glyphLayout.draw(uiBatch, 10f, Gdx.graphics.getHeight() - 10f);
+            }
+
+            final int seconds = (int)levelTime;
+            final int milliseconds = (int)(levelTime*1000f) % 1000;
+            glyphLayout.setText(String.format("%d.%03d", seconds, milliseconds), Color.GREEN, 0f, Align.left);
+            glyphLayout.draw(uiBatch, Gdx.graphics.getWidth()/2f - glyphLayout.width/2f, Gdx.graphics.getHeight() - 10f);
         }
-        glyphLayout.draw(uiBatch, 0, Gdx.graphics.getHeight());
         uiBatch.end();
     }
 

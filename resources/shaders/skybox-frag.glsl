@@ -21,6 +21,55 @@ struct GradientPoint {
 	float stop;
 };
 
+// Star sampler, based on https://www.shadertoy.com/view/Md2SR3
+//-------------------------------------------------------------------------------------------------------
+// Return random noise in the range [0.0, 1.0], as a function of x.
+float noise3d( in vec3 x )
+{
+    float xhash = sin( x.x * 37.0 );
+    float yhash = sin( x.y * 57.0 );
+    float zhash = sin( x.z * 77.0 );
+    return fract(415.92653 * (xhash + yhash + zhash));
+}
+
+// Convert noise3d() into a "star field" by stomping everthing below fThreshhold to zero.
+float NoisyStarField(in vec3 vSamplePos, float fThreshhold) {
+    float result = noise3d( vSamplePos );
+    if (result >= fThreshhold) {
+        return pow( (result - fThreshhold)/(1.0 - fThreshhold), 6.0 );
+    } else {
+        return 0.0;
+    }
+}
+
+// Stabilize NoisyStarField() by only sampling at integer values.
+float StableStarField( in vec3 samplePoint, float threshold )
+{
+    // Linear interpolation between four samples.
+    // Note: This approach has some visual artifacts.
+    // There must be a better way to "anti alias" the star field.
+    float fractX = fract( samplePoint.x );
+    float fractY = fract( samplePoint.y );
+    float fractZ = fract( samplePoint.z );
+    vec3 floorSamplePoint = floor( samplePoint );
+
+    float s000 = NoisyStarField(floorSamplePoint, threshold);
+    float s001 = NoisyStarField(floorSamplePoint + vec3(0.0, 0.0, 1.0), threshold);
+    float s010 = NoisyStarField(floorSamplePoint + vec3(0.0, 1.0, 0.0), threshold);
+    float s011 = NoisyStarField(floorSamplePoint + vec3(0.0, 1.0, 1.0), threshold);
+    float s100 = NoisyStarField(floorSamplePoint + vec3(1.0, 0.0, 0.0), threshold);
+    float s101 = NoisyStarField(floorSamplePoint + vec3(1.0, 0.0, 1.0), threshold);
+    float s110 = NoisyStarField(floorSamplePoint + vec3(1.0, 1.0, 0.0), threshold);
+    float s111 = NoisyStarField(floorSamplePoint + vec3(1.0, 1.0, 1.0), threshold);
+
+    vec4 sYZ = mix(vec4(s000, s001, s010, s011), vec4(s100, s101, s110, s111), fractX);
+    vec2 sZ = mix(sYZ.xy, sYZ.zw, fractY);
+    float s = mix(sZ.x, sZ.y, fractZ);
+    return s;
+}
+//-------------------------------------------------------------------------------------------------------
+
+
 void main() {
 	mat3 camera = setCamera(cameraDirection, 0.0);
     vec2 pos = (v_position * screenDimensions) / screenDimensions.y;
@@ -33,8 +82,8 @@ void main() {
 	GradientPoint high = GradientPoint(vec3(41, 162, 255), 1.0);
 */
 	// Night
-	GradientPoint low = GradientPoint(vec3(30, 50, 30), -1.0);
-    GradientPoint mid = GradientPoint(vec3(10, 15, 10), -0.5);
+	GradientPoint low = GradientPoint(vec3(15, 25, 15), -1.0);
+    GradientPoint mid = GradientPoint(vec3(5, 7, 5), -0.5);
     GradientPoint high = GradientPoint(vec3(3, 3, 5), 1.0);
 
 	float a = ray.y;
@@ -44,6 +93,12 @@ void main() {
 	} else {
 		color = mix(mid.color, high.color, (a - mid.stop) / (high.stop - mid.stop));
 	}
+	color /= vec3(255);
 
-	o_fragColor = vec4(color / vec3(255), 1.0);
+	float star = StableStarField(ray * 350.0 , 0.99);
+	star *= max(ray.y + 0.8, 0.0) / 1.5;
+	color += vec3(star);
+
+
+	o_fragColor = vec4(color, 1.0);
 }
