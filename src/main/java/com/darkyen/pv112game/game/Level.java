@@ -13,6 +13,7 @@ public final class Level {
     public final static byte GRASS_01 = 1<<2;
     public final static byte GRASS_11 = 1<<3;
 
+    public final int order;
     public final int width, height;
     public final boolean[][] tileTraversable;
     public final byte[][] tileGrass;
@@ -24,7 +25,8 @@ public final class Level {
     public float playerSpeed = 0.7f;
     public float playerRotationSpeed = 45f;
 
-    public Level(int width, int height) {
+    public Level(int order, int width, int height, long seed) {
+        this.order = order;
         this.width = width;
         this.height = height;
         this.tileTraversable = new boolean[width][height];

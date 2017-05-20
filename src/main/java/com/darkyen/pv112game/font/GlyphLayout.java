@@ -12,7 +12,7 @@ import com.darkyen.pv112game.gl.SpriteBatch;
  *
  */
 @SuppressWarnings({"unused", "WeakerAccess"})
-public class GlyphLayout {
+public final class GlyphLayout {
 
 	private static final char C_OPEN = '{', C_CLOSE = '}';
 	private static final Pool<Color> colorPool = Pools.get(Color.class);

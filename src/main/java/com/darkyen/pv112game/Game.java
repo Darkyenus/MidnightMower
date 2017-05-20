@@ -6,12 +6,14 @@ import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.profiling.GLErrorListener;
 import com.badlogic.gdx.graphics.profiling.GLProfiler;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.darkyen.pv112game.font.Font;
 import com.darkyen.pv112game.font.GlyphLayout;
+import com.darkyen.pv112game.game.Cameraman;
 import com.darkyen.pv112game.game.Level;
 import com.darkyen.pv112game.game.WorldRenderer;
 import com.darkyen.pv112game.gl.Environment;
@@ -28,7 +30,7 @@ public final class Game implements ApplicationListener {
     private boolean paused = false;
     private State state = null;
     private State nextState = null;
-    private Level level;
+    public Level level;
 
     //Render world
     private final ScreenViewport worldViewport = new ScreenViewport(new PerspectiveCamera());
@@ -37,6 +39,8 @@ public final class Game implements ApplicationListener {
 
     private final Environment.PointLight leftHeadlight = new Environment.PointLight();
     private final Environment.PointLight rightHeadlight = new Environment.PointLight();
+
+    public final Cameraman cameraman = new Cameraman(Cameraman.NULL_CAMERA_SHOT);
 
     //Render UI
     private final ScreenViewport uiViewport = new ScreenViewport(new OrthographicCamera());
@@ -55,10 +59,6 @@ public final class Game implements ApplicationListener {
 
     public boolean isPaused() {
         return paused;
-    }
-
-    public Level getLevel() {
-        return level;
     }
 
     public ScreenViewport getWorldViewport() {
@@ -122,7 +122,7 @@ public final class Game implements ApplicationListener {
         GLProfiler.listener = GLErrorListener.LOGGING_LISTENER;
 
         // Game
-        level = new Level(5, 5);
+        level = new Level(1, 5, 5, System.currentTimeMillis());
 
         // World
         environment = new Environment(worldViewport.getCamera());
@@ -238,6 +238,7 @@ public final class Game implements ApplicationListener {
             }
         }
 
+        cameraman.update(delta);
         state.update(delta);
         renderWorld();
         state.renderUI();
@@ -260,4 +261,19 @@ public final class Game implements ApplicationListener {
         uiBatch.dispose();
         font.dispose();
     }
+
+    public final Cameraman.CameraShot CAMERA_SHOT_PLAYER_VIEW = new Cameraman.CameraShot() {
+
+        private final Vector2 offset = new Vector2();
+
+        @Override
+        public void set(Vector3 position, Vector3 direction) {
+            position.set(level.playerPos.x, 1.5f, level.playerPos.y);
+
+            final Vector2 offset = this.offset.set(0f, -2f).rotate(-level.playerAngle);
+            position.add(offset.x, 0f, offset.y);
+
+            direction.set(-offset.x, -0.4f, -offset.y).nor();
+        }
+    };
 }

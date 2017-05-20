@@ -11,7 +11,7 @@ import com.darkyen.pv112game.gl.Model;
 /**
  *
  */
-public class Models {
+public final class Models {
 
     private static final G3dModelLoader MODEL_LOADER = new G3dModelLoader(new JsonReader());
     public static final Array<Model> LOADED_MODELS = new Array<>();

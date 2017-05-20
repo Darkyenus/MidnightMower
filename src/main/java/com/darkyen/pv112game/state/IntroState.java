@@ -2,11 +2,9 @@ package com.darkyen.pv112game.state;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Align;
 import com.darkyen.pv112game.Game;
 import com.darkyen.pv112game.State;
@@ -17,57 +15,49 @@ import com.darkyen.pv112game.gl.SpriteBatch;
 /**
  *
  */
-public class IntroState extends State {
+public final class IntroState extends State {
 
     private float time = 0f;
 
     private boolean zoomingIn = false;
-    private float timeBeforeZoomingIn;
-    private final float ZOOMING_IN_DURATION = 1f;
+    private static final float ZOOMING_IN_DURATION = 1f;
 
     public IntroState(Game game) {
         super(game);
     }
 
     @Override
+    public void begin() {
+        game.cameraman.reset((position, direction) -> {
+            final Level level = game.level;
+
+            final float radius = Vector2.len(level.width, level.height)/2f;
+            final float rotationSpeed = 1f/radius;
+            final float rotationTime = time;
+            position.set(
+                    (float)Math.sin(rotationTime * rotationSpeed) * radius,
+                    radius/2f,
+                    (float)Math.cos(rotationTime * rotationSpeed) * radius);
+            direction.set(position).scl(-1f).nor();
+            position.add(level.width/2f, 0f, level.height/2f);
+        });
+    }
+
+    @Override
     public void update(float delta) {
-        this.time += delta;
-
-        final Camera camera = game.getWorldViewport().getCamera();
-        final Level level = game.getLevel();
-
-        final float radius = Vector2.len(level.width, level.height)/2f;
-        final float rotationSpeed = 1f/radius;
-        final float rotationTime = zoomingIn ? timeBeforeZoomingIn : time;
-        camera.position.set(
-                (float)Math.sin(rotationTime * rotationSpeed) * radius,
-                radius/2f,
-                (float)Math.cos(rotationTime * rotationSpeed) * radius);
-        camera.direction.set(camera.position).scl(-1f).nor();
-        camera.position.add(level.width/2f, 0f, level.height/2f);
-
-        if (zoomingIn) {
-            final Vector3 zoomedPosition = new Vector3();
-            final Vector3 zoomedDirection = new Vector3();
-            GameState.cameraToMowerView(level, zoomedPosition, zoomedDirection);
-
-            final float progress = Interpolation.smooth.apply(time / ZOOMING_IN_DURATION);
-
-            camera.position.lerp(zoomedPosition, progress);
-            camera.direction.lerp(zoomedDirection, progress).nor();
-        }
-
-        camera.update();
-
-        if (zoomingIn && time >= ZOOMING_IN_DURATION) {
-            game.setState(new GameState(game));
+        if (!zoomingIn) {
+            this.time += delta;
         }
 
         if (!zoomingIn && (Gdx.input.isKeyPressed(Input.Keys.ANY_KEY) || Gdx.input.isTouched())) {
-            timeBeforeZoomingIn = time;
-            time = 0f;
             zoomingIn = true;
+            game.cameraman.next(game.CAMERA_SHOT_PLAYER_VIEW, ZOOMING_IN_DURATION, Interpolation.smooth);
+            game.schedule(ZOOMING_IN_DURATION, () -> {
+                game.setState(new GameState(game));
+            });
         }
+
+        game.cameraman.apply(game.getWorldViewport().getCamera());
     }
 
     @Override
@@ -78,19 +68,19 @@ public class IntroState extends State {
         final GlyphLayout glyphs = game.getSharedGlyphLayout();
         final Color white = Color.WHITE.cpy();
         if (zoomingIn) {
-            white.a = Interpolation.smooth.apply(1f - time / ZOOMING_IN_DURATION);
+            white.a = Interpolation.smooth.apply(1f - game.cameraman.getTransitionProgress());
         }
         glyphs.setText("{DARK_GRAY}Midnight{} {FOREST}Rider", white, Gdx.graphics.getWidth(), Align.center);
         glyphs.draw(uiBatch, 0f, Gdx.graphics.getHeight() / 4 * 3 + glyphs.height/2);
 
         float pressAnyKeyAlpha = 0f;
-        if ((zoomingIn ? timeBeforeZoomingIn : time) > 5f) {
+        if (time > 5f) {
             pressAnyKeyAlpha = 1f;
-        } else if ((zoomingIn ? timeBeforeZoomingIn : time) > 4f) {
+        } else if (time > 4f) {
             pressAnyKeyAlpha = time - 4f;
         }
         if (zoomingIn) {
-            pressAnyKeyAlpha *= Interpolation.fade.apply(1f - (time / ZOOMING_IN_DURATION));
+            pressAnyKeyAlpha *= Interpolation.fade.apply(1f - game.cameraman.getTransitionProgress());
         }
 
         if (pressAnyKeyAlpha > 0f) {

@@ -8,7 +8,7 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 /**
  * Shader based skybox
  */
-public class Skybox implements Disposable {
+public final class Skybox implements Disposable {
 
     private final Shader shader;
     private final Mesh screenMesh;

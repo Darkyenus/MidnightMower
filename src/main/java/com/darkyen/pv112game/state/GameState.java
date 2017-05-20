@@ -3,7 +3,6 @@ package com.darkyen.pv112game.state;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.audio.Sound;
-import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g3d.utils.FirstPersonCameraController;
@@ -23,7 +22,7 @@ import com.darkyen.pv112game.gl.SpriteBatch;
 /**
  *
  */
-public class GameState extends State {
+public final class GameState extends State {
 
     private boolean debugCamera = false;
     private boolean debugDraw = false;
@@ -38,7 +37,7 @@ public class GameState extends State {
 
         @Override
         public void spawn(GrassParticle particle) {
-            final Level level = game.getLevel();
+            final Level level = game.level;
             particle.position.set(level.playerPos.x, 0.1f, level.playerPos.y);
             particle.scale.y = particle.scale.z = particle.scale.x = MathUtils.random() * 0.1f;
             particle.flyDirection.set(MathUtils.random(-0.35f, 0.35f), MathUtils.random(-0.25f, 0.25f), -1f).nor().rotate(Vector3.Y, level.playerAngle);
@@ -89,6 +88,7 @@ public class GameState extends State {
 
     @Override
     public void begin() {
+        game.cameraman.reset(game.CAMERA_SHOT_PLAYER_VIEW);
         soundStart.play();
 
         game.schedule(3.1f, ()->{
@@ -114,7 +114,7 @@ public class GameState extends State {
 
     @Override
     public void update(float delta) {
-        final Level level = game.getLevel();
+        final Level level = game.level;
 
         if (!game.isPaused()) {
 
@@ -182,7 +182,7 @@ public class GameState extends State {
                             game.disableHeadlights();
 
                             game.schedule(2f, () -> {
-                                //TODO next level
+                                game.setState(new GameOverState(game, level.order));
                             });
                         });
                     });
@@ -196,17 +196,7 @@ public class GameState extends State {
             return;
         }
 
-        final Camera camera = game.getWorldViewport().getCamera();
-        cameraToMowerView(level, camera.position, camera.direction);
-    }
-
-    public static void cameraToMowerView(Level level, Vector3 position, Vector3 direction) {
-        position.set(level.playerPos.x, 1.5f, level.playerPos.y);
-
-        final Vector2 offset = new Vector2(0f, -2f).rotate(-level.playerAngle);
-        position.add(offset.x, 0f, offset.y);
-
-        direction.set(-offset.x, -0.4f, -offset.y).nor();
+        game.cameraman.apply(game.getWorldViewport().getCamera());
     }
 
     @Override
@@ -214,7 +204,7 @@ public class GameState extends State {
         final ScreenViewport uiViewport = game.getUiViewport();
         final SpriteBatch uiBatch = game.getUiBatch();
         final GlyphLayout glyphLayout = game.getSharedGlyphLayout();
-        final Level level = game.getLevel();
+        final Level level = game.level;
 
         final GL20 gl = Gdx.gl30;
         gl.glDisable(GL20.GL_DEPTH_TEST);

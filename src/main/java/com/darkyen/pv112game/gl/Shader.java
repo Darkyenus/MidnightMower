@@ -21,7 +21,7 @@ import static com.badlogic.gdx.graphics.GL20.*;
 /**
  * Represents a shader program
  */
-public class Shader {
+public final class Shader {
 
     private static final Logger LOG = LoggerFactory.getLogger(Shader.class);
 

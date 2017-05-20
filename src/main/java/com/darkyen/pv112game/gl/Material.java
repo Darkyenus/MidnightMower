@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
 /**
  *
  */
-public class Material {
+public final class Material {
     public final String id;
 
     private final Color ambient;

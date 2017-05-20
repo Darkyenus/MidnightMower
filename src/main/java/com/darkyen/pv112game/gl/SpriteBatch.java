@@ -8,7 +8,7 @@ import com.badlogic.gdx.utils.Disposable;
 /**
  *
  */
-public class SpriteBatch implements Disposable {
+public final class SpriteBatch implements Disposable {
 
     public static final float WHITE = Color.WHITE.toFloatBits();
 
