@@ -61,13 +61,21 @@ public final class Mesh implements Disposable {
         vaoHandle = vaoHandlePtr.get(0);
 
         // Index init
-        indexByteBuffer = BufferUtils.newUnsafeByteBuffer(maxIndices * 2);
+        if (maxIndices == 0) {
+            indexBuffer = null;
+            indexByteBuffer = null;
+            indexBufferHandle = -1;
+            indexBufferDirty = false;
+            indexBufferUsage = -1;
+        } else {
+            indexByteBuffer = BufferUtils.newUnsafeByteBuffer(maxIndices * 2);
 
-        indexBuffer = indexByteBuffer.asShortBuffer();
-        indexBuffer.flip();
-        indexByteBuffer.flip();
-        indexBufferHandle = Gdx.gl20.glGenBuffer();
-        indexBufferUsage = staticIndices ? GL20.GL_STATIC_DRAW : GL20.GL_DYNAMIC_DRAW;
+            indexBuffer = indexByteBuffer.asShortBuffer();
+            indexBuffer.flip();
+            indexByteBuffer.flip();
+            indexBufferHandle = Gdx.gl20.glGenBuffer();
+            indexBufferUsage = staticIndices ? GL20.GL_STATIC_DRAW : GL20.GL_DYNAMIC_DRAW;
+        }
     }
 
     public int getVertexCount() {
@@ -137,7 +145,7 @@ public final class Mesh implements Disposable {
 
         gl.glBindVertexArray(vaoHandle);
         gl.glBindBuffer(GL20.GL_ARRAY_BUFFER, vertexBufferHandle);
-        gl.glBindBuffer(GL20.GL_ELEMENT_ARRAY_BUFFER, indexBufferHandle);
+        if (indexBufferHandle != -1) gl.glBindBuffer(GL20.GL_ELEMENT_ARRAY_BUFFER, indexBufferHandle);
 
         // VAO Check
         if (vertexAttributeLocationsShaderProgram != shader.getProgram()) {
@@ -180,20 +188,21 @@ public final class Mesh implements Disposable {
     }
 
     public void unbind () {
-        final GL30 gl = Gdx.gl30;
-        gl.glBindVertexArray(0);
-        gl.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
-        gl.glBindBuffer(GL20.GL_ELEMENT_ARRAY_BUFFER, 0);
+        Gdx.gl30.glBindVertexArray(0);
     }
 
     public void render (int primitiveType, int offset, int count) {
         assert offset >= 0;
         assert count > 0;
-        assert offset < getIndexCount();
-        assert offset + count <= getIndexCount();
+        assert indexBuffer == null || offset < getIndexCount();
+        assert indexBuffer == null || offset + count <= getIndexCount();
         assert !vertexBufferDirty;
         assert !indexBufferDirty;
-        Gdx.gl30.glDrawElements(primitiveType, count, GL20.GL_UNSIGNED_SHORT, offset * 2);
+        if (indexBufferHandle != -1) {
+            Gdx.gl30.glDrawElements(primitiveType, count, GL20.GL_UNSIGNED_SHORT, offset * 2);
+        } else {
+            Gdx.gl30.glDrawArrays(primitiveType, offset, count);
+        }
     }
 
     public void dispose () {

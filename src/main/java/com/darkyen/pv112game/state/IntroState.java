@@ -25,8 +25,12 @@ public class IntroState extends State {
     private float timeBeforeZoomingIn;
     private final float ZOOMING_IN_DURATION = 1f;
 
+    public IntroState(Game game) {
+        super(game);
+    }
+
     @Override
-    public void update(Game game, float delta) {
+    public void update(float delta) {
         this.time += delta;
 
         final Camera camera = game.getWorldViewport().getCamera();
@@ -67,7 +71,7 @@ public class IntroState extends State {
     }
 
     @Override
-    public void renderUI(Game game) {
+    public void renderUI() {
         final SpriteBatch uiBatch = game.getUiBatch();
         uiBatch.begin(game.getUiViewport().getCamera(), true);
 

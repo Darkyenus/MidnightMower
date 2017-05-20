@@ -105,7 +105,7 @@ public final class Game implements ApplicationListener {
         glyphLayout = new GlyphLayout(font, true);
 
         // Begin
-        setState(new IntroState());
+        setState(new IntroState(this));
     }
 
     @Override
@@ -123,11 +123,13 @@ public final class Game implements ApplicationListener {
         gl.glEnable(GL20.GL_DEPTH_TEST);
         gl.glEnable(GL20.GL_CULL_FACE);
 
+        state.preRender();
+
         environment.begin();
-
         WorldRenderer.render(level, environment);
-
         environment.end();
+
+        state.postRender();
 
         skybox.draw(worldViewport);
     }
@@ -146,9 +148,9 @@ public final class Game implements ApplicationListener {
             Gdx.input.setInputProcessor(state);
         }
 
-        state.update(this, Gdx.graphics.getDeltaTime());
+        state.update(Gdx.graphics.getDeltaTime());
         renderWorld();
-        state.renderUI(this);
+        state.renderUI();
     }
 
     @Override

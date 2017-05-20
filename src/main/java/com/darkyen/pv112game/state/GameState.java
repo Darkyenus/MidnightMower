@@ -6,6 +6,8 @@ import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g3d.utils.FirstPersonCameraController;
+import com.badlogic.gdx.math.Interpolation;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Align;
@@ -14,6 +16,7 @@ import com.darkyen.pv112game.Game;
 import com.darkyen.pv112game.State;
 import com.darkyen.pv112game.font.GlyphLayout;
 import com.darkyen.pv112game.game.Level;
+import com.darkyen.pv112game.gl.ParticleEffect;
 import com.darkyen.pv112game.gl.SpriteBatch;
 
 /**
@@ -25,12 +28,59 @@ public class GameState extends State {
     private boolean debugDraw = false;
     private final FirstPersonCameraController debugCameraController;
 
+    private final ParticleEffect<GrassParticle> cutGrassParticles = new ParticleEffect<>(256, new ParticleEffect.ParticleController<GrassParticle>() {
+
+        @Override
+        public GrassParticle newParticle() {
+            return new GrassParticle();
+        }
+
+        @Override
+        public void spawn(GrassParticle particle) {
+            final Level level = game.getLevel();
+            particle.position.set(level.playerPos.x, 0.1f, level.playerPos.y);
+            particle.scale.y = particle.scale.z = particle.scale.x = MathUtils.random() * 0.1f;
+            particle.flyDirection.set(MathUtils.random(-0.35f, 0.35f), MathUtils.random(-0.25f, 0.25f), -1f).nor().rotate(Vector3.Y, level.playerAngle);
+            particle.rotationAxis.setToRandomDirection();
+            particle.rotation.set(particle.rotationAxis, particle.rotationDeg = MathUtils.random() * 360f);
+            particle.remainingTime = 1f;
+            particle.color.set(MathUtils.random()*0.1f, MathUtils.random()*0.2f + 0.2f, MathUtils.random()*0.2f, 1f);
+        }
+
+        @Override
+        public boolean update(GrassParticle particle, float delta) {
+            particle.remainingTime -= delta;
+            particle.position.mulAdd(particle.flyDirection, delta * Interpolation.circleOut.apply(particle.remainingTime));
+            particle.rotation.set(particle.rotationAxis, particle.rotationDeg += delta * 20f);
+            return particle.remainingTime > 0f;
+        }
+
+    });
+    private static class GrassParticle extends ParticleEffect.Particle {
+        public final Vector3 rotationAxis = new Vector3();
+        public final Vector3 flyDirection = new Vector3();
+        public float remainingTime;
+        public float rotationDeg;
+    }
+
+    private float timeToNextParticle = 0f;
+    private int particlesRemaining = 0;
+
     public GameState(Game game) {
+        super(game);
         debugCameraController = new FirstPersonCameraController(game.getWorldViewport().getCamera());
     }
 
     @Override
-    public void update(Game game, float delta) {
+    public void postRender() {
+        cutGrassParticles.draw(game.getWorldViewport().getCamera());
+    }
+
+    private static final int PARTICLES_PER_GRASS = 60;
+    private float nextStrayParticle = 0f;
+
+    @Override
+    public void update(float delta) {
         final Level level = game.getLevel();
 
         if (!game.isPaused()) {
@@ -40,6 +90,9 @@ public class GameState extends State {
                 // Could better handle discrete updates with rotation
                 final Vector2 movement = new Vector2(0f, level.playerSpeed * delta * (forward ? 1f : -1f)).rotate(-level.playerAngle);
                 final Level.CollisionData collisionData = level.playerMove(movement);
+                if (collisionData.grassCut) {
+                    particlesRemaining += PARTICLES_PER_GRASS;
+                }
                 if (collisionData.collision != Level.CollisionData.NO_COLLISION) {
                     // Slide
                     movement.mulAdd(movement, -collisionData.distanceTravelled / movement.len());
@@ -48,7 +101,9 @@ public class GameState extends State {
                     } else {
                         movement.y = 0f;
                     }
-                    level.playerMove(movement);
+                    if(level.playerMove(movement).grassCut) {
+                        particlesRemaining += PARTICLES_PER_GRASS;
+                    }
                 }
             }
 
@@ -58,6 +113,22 @@ public class GameState extends State {
             if (left ^ right) {
                 final float turnAngle = delta * level.playerRotationSpeed;
                 level.playerAngle += left ? turnAngle : -turnAngle;
+            }
+
+            cutGrassParticles.update(delta);
+            if (particlesRemaining > 0) {
+                timeToNextParticle -= delta;
+                while (timeToNextParticle < 0f) {
+                    timeToNextParticle += 0.015f;
+                    particlesRemaining--;
+                    cutGrassParticles.spawn(1);
+                }
+            }
+
+            nextStrayParticle -= delta;
+            while (nextStrayParticle < 0) {
+                cutGrassParticles.spawn(1);
+                nextStrayParticle += MathUtils.random() * 0.9f;
             }
         }
 
@@ -77,11 +148,11 @@ public class GameState extends State {
         final Vector2 offset = new Vector2(0f, -2f).rotate(-level.playerAngle);
         position.add(offset.x, 0f, offset.y);
 
-        direction.set(-offset.x, -0.3f, -offset.y).nor();
+        direction.set(-offset.x, -0.4f, -offset.y).nor();
     }
 
     @Override
-    public void renderUI(Game game) {
+    public void renderUI() {
         final ScreenViewport uiViewport = game.getUiViewport();
         final SpriteBatch uiBatch = game.getUiBatch();
         final GlyphLayout glyphLayout = game.getSharedGlyphLayout();
@@ -96,7 +167,7 @@ public class GameState extends State {
 
         uiBatch.begin(uiViewport.getCamera(), true);
         if (debugDraw) {
-            glyphLayout.setText("FPS: "+Gdx.graphics.getFramesPerSecond()+"\nPos: "+level.playerPos+"\nTile: "+level.playerTileX+" "+level.playerTileY+"\nA: "+level.playerAngle+"\nGrass: "+level.remainingGrass, Color.WHITE, Gdx.graphics.getWidth(), Align.left);
+            glyphLayout.setText("FPS: "+Gdx.graphics.getFramesPerSecond()+"\nPos: "+level.playerPos+"\nTile: "+level.playerTileX+" "+level.playerTileY+"\nA: "+level.playerAngle+"\nGrass: "+level.remainingGrass+"\nPart: "+cutGrassParticles.getParticleCount(), Color.WHITE, Gdx.graphics.getWidth(), Align.left);
         } else {
             glyphLayout.setText("Remaining: "+level.remainingGrass, Color.WHITE, Gdx.graphics.getWidth(), Align.left);
         }
@@ -106,13 +177,13 @@ public class GameState extends State {
 
     @Override
     public boolean keyDown(int keycode) {
-        if (debugCamera && debugCameraController.keyDown(keycode)) return true;
+        if (debugCamera) debugCameraController.keyDown(keycode);
         return super.keyDown(keycode);
     }
 
     @Override
     public boolean keyUp(int keycode) {
-        if (debugCamera && debugCameraController.keyUp(keycode)) return true;
+        if (debugCamera) debugCameraController.keyUp(keycode);
         if (keycode == Input.Keys.F3) {
             debugDraw = !debugDraw;
             return true;
