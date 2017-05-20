@@ -17,6 +17,7 @@ layout(packed) uniform Environment {
 	vec3 pointLightPosition[MAX_POINT_LIGHTS];
 	vec3 pointLightColor[MAX_POINT_LIGHTS];
 	vec3 pointLightAttenuation[MAX_POINT_LIGHTS];
+	vec4 pointLightDirection[MAX_POINT_LIGHTS];
 };
 
 layout(packed, shared) uniform Material {
@@ -37,6 +38,7 @@ void main() {
 		vec3 lightPosition = pointLightPosition[i];
 		vec3 lightColor = pointLightColor[i];
 		vec3 lightAttenuation = pointLightAttenuation[i];
+		vec4 lightDirection = pointLightDirection[i];
 
 		vec3 directionToLight;
 		float intensity;
@@ -51,6 +53,13 @@ void main() {
 		} else {
 			directionToLight = normalize(lightPosition);
 			intensity = 1.0;
+		}
+
+		if (lightDirection.w > -2.0) {
+			float cone = dot(-directionToLight, lightDirection.xyz);
+			if (cone < lightDirection.w) {
+				intensity = 0.0;
+			}
 		}
 
 		float baseDiffuseIntensity = max(dot(normal, directionToLight), 0.0);

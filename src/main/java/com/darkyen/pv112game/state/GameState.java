@@ -72,6 +72,16 @@ public class GameState extends State {
     }
 
     @Override
+    public void begin() {
+        game.enableHeadlights();
+    }
+
+    @Override
+    public void end() {
+        game.disableHeadlights();
+    }
+
+    @Override
     public void postRender() {
         cutGrassParticles.draw(game.getWorldViewport().getCamera());
     }

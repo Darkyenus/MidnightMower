@@ -4,6 +4,8 @@ import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.profiling.GLErrorListener;
 import com.badlogic.gdx.graphics.profiling.GLProfiler;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.darkyen.pv112game.font.Font;
 import com.darkyen.pv112game.font.GlyphLayout;
@@ -29,6 +31,9 @@ public final class Game implements ApplicationListener {
     private final ScreenViewport worldViewport = new ScreenViewport(new PerspectiveCamera());
     private Environment environment;
     private Skybox skybox;
+
+    private final Environment.PointLight leftHeadlight = new Environment.PointLight();
+    private final Environment.PointLight rightHeadlight = new Environment.PointLight();
 
     //Render UI
     private final ScreenViewport uiViewport = new ScreenViewport(new OrthographicCamera());
@@ -97,6 +102,17 @@ public final class Game implements ApplicationListener {
         moon.attenuation.setZero().x = 8f;
         environment.getPointLights().add(moon);
 
+        {
+            leftHeadlight.color.set(Color.WHITE);
+            rightHeadlight.color.set(leftHeadlight.color);
+
+            leftHeadlight.attenuation.set(0.1f, 0f, 0.6f);
+            rightHeadlight.attenuation.set(leftHeadlight.attenuation);
+
+            leftHeadlight.directionCutoff = 0.85f;
+            rightHeadlight.directionCutoff = leftHeadlight.directionCutoff;
+        }
+
         skybox = new Skybox();
 
         // UI
@@ -106,6 +122,16 @@ public final class Game implements ApplicationListener {
 
         // Begin
         setState(new IntroState(this));
+    }
+
+    public void enableHeadlights() {
+        environment.getPointLights().add(leftHeadlight);
+        environment.getPointLights().add(rightHeadlight);
+    }
+
+    public void disableHeadlights() {
+        environment.getPointLights().removeValue(leftHeadlight, true);
+        environment.getPointLights().removeValue(rightHeadlight, true);
     }
 
     @Override
@@ -124,6 +150,16 @@ public final class Game implements ApplicationListener {
         gl.glEnable(GL20.GL_CULL_FACE);
 
         state.preRender();
+
+        leftHeadlight.direction.set(MathUtils.sinDeg(level.playerAngle), 0f, MathUtils.cosDeg(level.playerAngle));
+        rightHeadlight.direction.set(leftHeadlight.direction);
+        leftHeadlight.position.set(level.playerPos.x, 0.1f, level.playerPos.y);
+        rightHeadlight.position.set(leftHeadlight.position);
+        final float lightOffset = 0.15f;
+        leftHeadlight.position.add(leftHeadlight.direction.z * lightOffset, 0f, -leftHeadlight.direction.x * lightOffset);
+        rightHeadlight.position.add(-leftHeadlight.direction.z * lightOffset, 0f, leftHeadlight.direction.x * lightOffset);
+
+        environment.getPointLights();// Mark dirty
 
         environment.begin();
         WorldRenderer.render(level, environment);
