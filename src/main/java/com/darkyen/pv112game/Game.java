@@ -1,11 +1,14 @@
 package com.darkyen.pv112game;
 
 import com.badlogic.gdx.*;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.profiling.GLErrorListener;
 import com.badlogic.gdx.graphics.profiling.GLProfiler;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.darkyen.pv112game.font.Font;
 import com.darkyen.pv112game.font.GlyphLayout;
@@ -40,6 +43,15 @@ public final class Game implements ApplicationListener {
     private SpriteBatch uiBatch;
     private Font font;
     private GlyphLayout glyphLayout;
+
+    //Scheduling
+    private final FloatArray scheduledTime = new FloatArray();
+    private final Array<Runnable> scheduledAction = new Array<>();
+
+    // Sounds
+    private Sound soundIntroCrickets;
+    private long soundIntroCricketsId = -1;
+
 
     public boolean isPaused() {
         return paused;
@@ -77,6 +89,32 @@ public final class Game implements ApplicationListener {
         nextState = state;
     }
 
+    public void schedule(float inSeconds, Runnable action) {
+        scheduledTime.add(inSeconds);
+        scheduledAction.add(action);
+    }
+
+    public void clearSchedule() {
+        scheduledTime.clear();
+        scheduledAction.clear();
+    }
+
+    public void startCrickets() {
+        if (soundIntroCrickets == null) {
+            soundIntroCrickets = Gdx.audio.newSound(Gdx.files.internal("sounds/crickets.ogg"));
+        }
+        if (soundIntroCricketsId == -1) {
+            soundIntroCricketsId = soundIntroCrickets.loop();
+        }
+    }
+
+    public void stopCrickets() {
+        if (soundIntroCricketsId != -1) {
+            soundIntroCrickets.stop(soundIntroCricketsId);
+            soundIntroCricketsId = -1;
+        }
+    }
+
     @Override
     public void create() {
         // Debug
@@ -96,10 +134,12 @@ public final class Game implements ApplicationListener {
         sun.attenuation.setZero().x = 2f;
         environment.getPointLights().add(sun);
         */
+        environment.setAmbientLight(new Color(0.2f, 0.2f, 0.2f, 1f));
+
         final Environment.PointLight moon = new Environment.PointLight();
         moon.color.set(0.6f, 0.6f, 1f, 1f);
         moon.position.set(10_000f, 10_000f, 10_000f);
-        moon.attenuation.setZero().x = 8f;
+        moon.attenuation.setZero().x = 4f;
         environment.getPointLights().add(moon);
 
         {
@@ -122,6 +162,7 @@ public final class Game implements ApplicationListener {
 
         // Begin
         setState(new IntroState(this));
+        startCrickets();
     }
 
     public void enableHeadlights() {
@@ -184,7 +225,20 @@ public final class Game implements ApplicationListener {
             Gdx.input.setInputProcessor(state);
         }
 
-        state.update(Gdx.graphics.getDeltaTime());
+        final float delta = Gdx.graphics.getDeltaTime();
+
+        // Update scheduled
+        for (int i = 0; i < scheduledTime.size;) {
+            scheduledTime.items[i] -= delta;
+            if (scheduledTime.items[i] <= 0f) {
+                scheduledTime.removeIndex(i);
+                scheduledAction.removeIndex(i).run();
+            } else {
+                i++;
+            }
+        }
+
+        state.update(delta);
         renderWorld();
         state.renderUI();
     }

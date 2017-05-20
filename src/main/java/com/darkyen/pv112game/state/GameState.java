@@ -2,6 +2,7 @@ package com.darkyen.pv112game.state;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -44,7 +45,7 @@ public class GameState extends State {
             particle.rotationAxis.setToRandomDirection();
             particle.rotation.set(particle.rotationAxis, particle.rotationDeg = MathUtils.random() * 360f);
             particle.remainingTime = 1f;
-            particle.color.set(MathUtils.random()*0.1f, MathUtils.random()*0.2f + 0.2f, MathUtils.random()*0.2f, 1f);
+            particle.color.set(MathUtils.random()*0.1f, MathUtils.random()*0.2f + 0.2f, MathUtils.random()*0.2f, 1f).mul(game.getEnvironment().getAmbientLight());
         }
 
         @Override
@@ -66,6 +67,12 @@ public class GameState extends State {
     private float timeToNextParticle = 0f;
     private int particlesRemaining = 0;
 
+    private final Sound soundIdle = Gdx.audio.newSound(Gdx.files.internal("sounds/lawnmower_idle.ogg"));
+    private long soundIdleLoopId = -1;
+    private final Sound soundStart = Gdx.audio.newSound(Gdx.files.internal("sounds/lawnmower_start.ogg"));
+
+    private boolean engineRunning = false;
+
     public GameState(Game game) {
         super(game);
         debugCameraController = new FirstPersonCameraController(game.getWorldViewport().getCamera());
@@ -73,11 +80,23 @@ public class GameState extends State {
 
     @Override
     public void begin() {
-        game.enableHeadlights();
+        soundStart.play();
+
+        game.schedule(3.1f, ()->{
+            engineRunning = true;
+            game.enableHeadlights();
+            game.stopCrickets();
+            soundIdleLoopId = soundIdle.loop();
+        });
     }
 
     @Override
     public void end() {
+        game.clearSchedule();
+        if (soundIdleLoopId != -1) {
+            soundStart.stop(soundIdleLoopId);
+            soundIdleLoopId = -1;
+        }
         game.disableHeadlights();
     }
 
@@ -94,51 +113,53 @@ public class GameState extends State {
         final Level level = game.getLevel();
 
         if (!game.isPaused()) {
-            final boolean forward = Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP);
-            final boolean backward = Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN);
-            if (forward ^ backward) {
-                // Could better handle discrete updates with rotation
-                final Vector2 movement = new Vector2(0f, level.playerSpeed * delta * (forward ? 1f : -1f)).rotate(-level.playerAngle);
-                final Level.CollisionData collisionData = level.playerMove(movement);
-                if (collisionData.grassCut) {
-                    particlesRemaining += PARTICLES_PER_GRASS;
-                }
-                if (collisionData.collision != Level.CollisionData.NO_COLLISION) {
-                    // Slide
-                    movement.mulAdd(movement, -collisionData.distanceTravelled / movement.len());
-                    if (collisionData.collision == Level.CollisionData.COLLIDED_CROSSING_X) {
-                        movement.x = 0f;
-                    } else {
-                        movement.y = 0f;
-                    }
-                    if(level.playerMove(movement).grassCut) {
+            if (engineRunning) {
+                final boolean forward = Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP);
+                final boolean backward = Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN);
+                if (forward ^ backward) {
+                    // Could better handle discrete updates with rotation
+                    final Vector2 movement = new Vector2(0f, level.playerSpeed * delta * (forward ? 1f : -1f)).rotate(-level.playerAngle);
+                    final Level.CollisionData collisionData = level.playerMove(movement);
+                    if (collisionData.grassCut) {
                         particlesRemaining += PARTICLES_PER_GRASS;
                     }
+                    if (collisionData.collision != Level.CollisionData.NO_COLLISION) {
+                        // Slide
+                        movement.mulAdd(movement, -collisionData.distanceTravelled / movement.len());
+                        if (collisionData.collision == Level.CollisionData.COLLIDED_CROSSING_X) {
+                            movement.x = 0f;
+                        } else {
+                            movement.y = 0f;
+                        }
+                        if (level.playerMove(movement).grassCut) {
+                            particlesRemaining += PARTICLES_PER_GRASS;
+                        }
+                    }
                 }
-            }
 
-            final boolean left = Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT);
-            final boolean right = Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT);
+                final boolean left = Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT);
+                final boolean right = Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT);
 
-            if (left ^ right) {
-                final float turnAngle = delta * level.playerRotationSpeed;
-                level.playerAngle += left ? turnAngle : -turnAngle;
-            }
+                if (left ^ right) {
+                    final float turnAngle = delta * level.playerRotationSpeed;
+                    level.playerAngle += left ? turnAngle : -turnAngle;
+                }
 
-            cutGrassParticles.update(delta);
-            if (particlesRemaining > 0) {
-                timeToNextParticle -= delta;
-                while (timeToNextParticle < 0f) {
-                    timeToNextParticle += 0.015f;
-                    particlesRemaining--;
+                cutGrassParticles.update(delta);
+                if (particlesRemaining > 0) {
+                    timeToNextParticle -= delta;
+                    while (timeToNextParticle < 0f) {
+                        timeToNextParticle += 0.015f;
+                        particlesRemaining--;
+                        cutGrassParticles.spawn(1);
+                    }
+                }
+
+                nextStrayParticle -= delta;
+                while (nextStrayParticle < 0) {
                     cutGrassParticles.spawn(1);
+                    nextStrayParticle += MathUtils.random() * 0.9f;
                 }
-            }
-
-            nextStrayParticle -= delta;
-            while (nextStrayParticle < 0) {
-                cutGrassParticles.spawn(1);
-                nextStrayParticle += MathUtils.random() * 0.9f;
             }
         }
 

@@ -37,6 +37,11 @@ public final class Environment implements Disposable {
         dirty = true;
     }
 
+    /** @return ambient light of the scene, assumes that it is not modified. */
+    public Color getAmbientLight() {
+        return this.ambientLight;
+    }
+
     public Array<PointLight> getPointLights() {
         dirty = true;
         return pointLights;
