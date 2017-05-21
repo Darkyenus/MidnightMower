@@ -12,6 +12,7 @@ public final class Skybox implements Disposable {
 
     private final Shader shader;
     private final Mesh screenMesh;
+    private final Texture moon = new Texture();
 
     public Skybox() {
         this.shader = new Shader(Gdx.files.internal("shaders/skybox-vert.glsl"), Gdx.files.internal("shaders/skybox-frag.glsl"));
@@ -25,9 +26,11 @@ public final class Skybox implements Disposable {
         screenMesh.setIndices(new short[]{
                 0, 1, 2, 3
         }, 0, 4);
+
+        moon.load(Gdx.files.internal("textures/dione.png"), Pixmap.Format.RGBA8888);
     }
 
-    public void draw(Viewport viewport) {
+    public void draw(Viewport viewport, Light moonLight) {
         final PerspectiveCamera camera = ((PerspectiveCamera) viewport.getCamera());
         final float fovFactor = (float)(1f / (Math.tan(Math.toRadians(camera.fieldOfView / 2f))));
 
@@ -36,10 +39,15 @@ public final class Skybox implements Disposable {
 
         gl.glDisable(GL20.GL_CULL_FACE);//TODO
 
+        moon.bind(0);
+
         shader.bind();
         shader.uniform("fovFactor").set(fovFactor);
         shader.uniform("cameraDirection").set(viewport.getCamera().direction);
         shader.uniform("screenDimensions").set(viewport.getScreenWidth(), viewport.getScreenHeight());
+
+        shader.uniform("moonPos").set(moonLight.position);
+        shader.uniform("moon").set(0);
 
         screenMesh.bind(shader);
         screenMesh.render(GL20.GL_TRIANGLE_FAN, 0, 4);

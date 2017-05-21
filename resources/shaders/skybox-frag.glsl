@@ -7,6 +7,9 @@ uniform float fovFactor;
 uniform vec3 cameraDirection;
 uniform vec2 screenDimensions;
 
+uniform vec3 moonPos;
+uniform sampler2D moon;
+
 // Camera to world tranformation, calcNormal, based on: https://www.shadertoy.com/view/Xds3zN
 mat3 setCamera (in vec3 direction, float roll) {
 	vec3 cw = normalize(direction);
@@ -69,6 +72,27 @@ float StableStarField( in vec3 samplePoint, float threshold )
 }
 //-------------------------------------------------------------------------------------------------------
 
+//-------------------------------------------------------------------------------------------------------
+// http://www.neilmendoza.com/glsl-rotation-about-an-arbitrary-axis/
+mat3 rotationMatrix(vec3 axis, float angle) {
+    axis = normalize(axis);
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
+
+    return mat3(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,
+                oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,
+                oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c);
+}
+//-------------------------------------------------------------------------------------------------------
+
+const float PI = 3.1415926536;
+const float TAU = 6.2831853072;
+const float moonSize = 0.15;
+
+vec2 toSpericalAngle(vec3 v) {
+	return vec2(atan(v.z, v.x), acos(v.y));
+}
 
 void main() {
 	mat3 camera = setCamera(cameraDirection, 0.0);
@@ -99,6 +123,16 @@ void main() {
 	star *= max(ray.y + 0.8, 0.0) / 1.5;
 	color += vec3(star);
 
+	vec2 moonAngle = toSpericalAngle(moonPos);
+
+	vec3 projectedRay = rotationMatrix(vec3(0.0, 0.0, 1.0), -moonAngle.y) * rotationMatrix(vec3(0.0, 1.0, 0.0), -moonAngle.x) * ray;
+	vec2 moonUV = projectedRay.xz;
+
+	if (length(moonUV) < moonSize && projectedRay.y > 0.0) {
+		vec2 uv = ((moonUV / moonSize) + 1.0) * 0.5;
+		vec4 moonColor = texture(moon, uv.yx);
+		color = (color * (1.0 - moonColor.a)) + moonColor.rgb * moonColor.a;
+	}
 
 	o_fragColor = vec4(color, 1.0);
 }

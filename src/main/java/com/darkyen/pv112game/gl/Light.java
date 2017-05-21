@@ -6,7 +6,7 @@ import com.badlogic.gdx.math.Vector3;
 /**
  *
  */
-public final class PointLight {
+public final class Light {
     public final Color color = new Color(1f, 1f, 1f, 1f);
     public final Vector3 position = new Vector3();
     public final Vector3 attenuation = new Vector3(0.1f, 0.3f, 0.02f);

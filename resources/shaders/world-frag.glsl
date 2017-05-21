@@ -42,7 +42,7 @@ void main() {
 
 		vec3 directionToLight;
 		float intensity;
-		if (lightAttenuation != vec3(0.0)) {
+		if (lightAttenuation.yz != vec2(0.0)) {
 			directionToLight = lightPosition - v_position;
 			float distance = length(directionToLight);
 			directionToLight = normalize(directionToLight);
@@ -52,7 +52,7 @@ void main() {
 								+ lightAttenuation.z * distance * distance);
 		} else {
 			directionToLight = normalize(lightPosition);
-			intensity = 1.0;
+			intensity = 1.0 / lightAttenuation.x;
 		}
 
 		if (lightDirection.w > -2.0) {

@@ -27,7 +27,7 @@ public final class Environment implements Disposable {
     private final UniformBuffer environmentUniforms;
 
     private final Color ambientLight = new Color(0.9f, 0.9f, 0.9f, 1f);
-    private final Array<PointLight> pointLights = new Array<>();
+    private final Array<Light> pointLights = new Array<>();
     private boolean dirty = true;
 
     private final ObjectMap<Model, Array<Matrix4>> batchedModels = new ObjectMap<>();
@@ -53,7 +53,7 @@ public final class Environment implements Disposable {
         return this.ambientLight;
     }
 
-    public Array<PointLight> getPointLights() {
+    public Array<Light> getPointLights() {
         dirty = true;
         return pointLights;
     }
@@ -79,23 +79,23 @@ public final class Environment implements Disposable {
 
             final int stride = 4*4;
             for (int i = 0; i < pointLightCount; i++) {
-                final PointLight pointLight = pointLights.get(i);
-                data.putFloat(offsets[2] + i*stride, pointLight.position.x);
-                data.putFloat(offsets[2] + i*stride+4, pointLight.position.y);
-                data.putFloat(offsets[2] + i*stride+8, pointLight.position.z);
+                final Light light = pointLights.get(i);
+                data.putFloat(offsets[2] + i*stride, light.position.x);
+                data.putFloat(offsets[2] + i*stride+4, light.position.y);
+                data.putFloat(offsets[2] + i*stride+8, light.position.z);
 
-                data.putFloat(offsets[3] + i*stride, pointLight.color.r);
-                data.putFloat(offsets[3] + i*stride+4, pointLight.color.g);
-                data.putFloat(offsets[3] + i*stride+8, pointLight.color.b);
+                data.putFloat(offsets[3] + i*stride, light.color.r);
+                data.putFloat(offsets[3] + i*stride+4, light.color.g);
+                data.putFloat(offsets[3] + i*stride+8, light.color.b);
 
-                data.putFloat(offsets[4] + i*stride, pointLight.attenuation.x);
-                data.putFloat(offsets[4] + i*stride+4, pointLight.attenuation.y);
-                data.putFloat(offsets[4] + i*stride+8, pointLight.attenuation.z);
+                data.putFloat(offsets[4] + i*stride, light.attenuation.x);
+                data.putFloat(offsets[4] + i*stride+4, light.attenuation.y);
+                data.putFloat(offsets[4] + i*stride+8, light.attenuation.z);
 
-                data.putFloat(offsets[5] + i*stride, pointLight.direction.x);
-                data.putFloat(offsets[5] + i*stride+4, pointLight.direction.y);
-                data.putFloat(offsets[5] + i*stride+8, pointLight.direction.z);
-                data.putFloat(offsets[5] + i*stride+12, pointLight.directionCutoff);
+                data.putFloat(offsets[5] + i*stride, light.direction.x);
+                data.putFloat(offsets[5] + i*stride+4, light.direction.y);
+                data.putFloat(offsets[5] + i*stride+8, light.direction.z);
+                data.putFloat(offsets[5] + i*stride+12, light.directionCutoff);
             }
 
             environmentUniforms.uploadData(data, true);

@@ -17,7 +17,7 @@ import com.darkyen.pv112game.game.Cameraman;
 import com.darkyen.pv112game.game.Level;
 import com.darkyen.pv112game.game.WorldRenderer;
 import com.darkyen.pv112game.gl.Environment;
-import com.darkyen.pv112game.gl.PointLight;
+import com.darkyen.pv112game.gl.Light;
 import com.darkyen.pv112game.gl.Skybox;
 import com.darkyen.pv112game.gl.SpriteBatch;
 import com.darkyen.pv112game.state.IntroState;
@@ -36,10 +36,11 @@ public final class Game implements ApplicationListener {
     //Render world
     private final ScreenViewport worldViewport = new ScreenViewport(new PerspectiveCamera());
     private Environment environment;
+    private final Light moonLight = new Light();
     private Skybox skybox;
 
-    private final PointLight leftHeadlight = new PointLight();
-    private final PointLight rightHeadlight = new PointLight();
+    private final Light leftHeadlight = new Light();
+    private final Light rightHeadlight = new Light();
 
     public final Cameraman cameraman = new Cameraman(Cameraman.NULL_CAMERA_SHOT);
 
@@ -128,20 +129,12 @@ public final class Game implements ApplicationListener {
         // World
         environment = new Environment(worldViewport.getCamera());
 
-        /*
-        final Environment.PointLight sun = new Environment.PointLight();
-        sun.color.set(1f, 1f, 0.8f, 1f);
-        sun.position.set(10_000f, 10_000f, 10_000f);
-        sun.attenuation.setZero().x = 2f;
-        environment.getPointLights().add(sun);
-        */
         environment.setAmbientLight(new Color(0.2f, 0.2f, 0.2f, 1f));
 
-        final PointLight moon = new PointLight();
-        moon.color.set(0.6f, 0.6f, 1f, 1f);
-        moon.position.set(10_000f, 10_000f, 10_000f);
-        moon.attenuation.setZero().x = 4f;
-        environment.getPointLights().add(moon);
+        moonLight.color.set(0.6f, 0.6f, 1f, 1f);
+        moonLight.position.set(1f, 0.6f, 1f).nor();
+        moonLight.attenuation.setZero().x = 4f;
+        environment.getPointLights().add(moonLight);
 
         {
             leftHeadlight.color.set(Color.WHITE);
@@ -209,7 +202,7 @@ public final class Game implements ApplicationListener {
 
         state.postRender();
 
-        skybox.draw(worldViewport);
+        skybox.draw(worldViewport, moonLight);
     }
 
     @Override
