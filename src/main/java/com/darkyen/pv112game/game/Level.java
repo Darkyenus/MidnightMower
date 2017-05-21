@@ -25,25 +25,21 @@ public final class Level {
     public float playerSpeed = 0.7f;
     public float playerRotationSpeed = 45f;
 
-    public Level(int order, int width, int height, long seed) {
+    public Level(int order, long seed) {
         this.order = order;
-        this.width = width;
-        this.height = height;
-        this.tileTraversable = new boolean[width][height];
+        final LevelGenerator.LevelData levelData = LevelGenerator.generateLevel(50 + order * 20, seed);
+        this.width = levelData.width;
+        this.height = levelData.height;
+        this.playerTileX = levelData.playerX;
+        this.playerTileY = levelData.playerY;
+        this.playerPos.set(levelData.playerX + 0.5f, levelData.playerY + 0.5f);
+        this.playerAngle = levelData.playerAngle;
+        this.tileTraversable = levelData.filled;
         this.tileGrass = new byte[width][height];
 
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                if (x == 0 || y == 0 || x + 1 == width || y + 1 == height || (x == width/2 && y == height /2)) {
-                    tileTraversable[x][y] = false;
-                } else {
-                    tileTraversable[x][y] = true;
-                    playerPos.x = x;
-                    playerPos.y = y;
-                    playerTileX = x;
-                    playerTileY = y;
-                    playerAngle = 33f;
-
+                if (tileTraversable[x][y]) {
                     byte grass = tileGrass[x][y] = (byte) (MathUtils.random.nextInt(1<<4) | MathUtils.random.nextInt(1<<4));
                     for (int i = 0; i < 4; i++) {
                         if ((grass & (1 << i)) != 0) {

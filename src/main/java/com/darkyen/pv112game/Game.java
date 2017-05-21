@@ -122,7 +122,7 @@ public final class Game implements ApplicationListener {
         GLProfiler.listener = GLErrorListener.LOGGING_LISTENER;
 
         // Game
-        level = new Level(1, 5, 5, System.currentTimeMillis());
+        level = new Level(1, System.currentTimeMillis());
 
         // World
         environment = new Environment(worldViewport.getCamera());

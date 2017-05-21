@@ -62,7 +62,7 @@ public final class GameOverState extends State {
     public boolean keyDown(int keycode) {
         if (time > 2f && !goingToNextLevel) {
             goingToNextLevel = true;
-            game.level = new Level(lastCompleteLevel + 1, 5 + lastCompleteLevel, 5 + lastCompleteLevel, System.currentTimeMillis());
+            game.level = new Level(lastCompleteLevel + 1, System.currentTimeMillis());
             game.cameraman.next(game.CAMERA_SHOT_PLAYER_VIEW, 2f, Interpolation.smooth);
             game.schedule(2f, () -> game.setState(new GameState(game)));
             return true;

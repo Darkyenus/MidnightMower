@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Interpolation;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Align;
 import com.darkyen.pv112game.Game;
@@ -49,14 +50,6 @@ public final class IntroState extends State {
             this.time += delta;
         }
 
-        if (!zoomingIn && (Gdx.input.isKeyPressed(Input.Keys.ANY_KEY) || Gdx.input.isTouched())) {
-            zoomingIn = true;
-            game.cameraman.next(game.CAMERA_SHOT_PLAYER_VIEW, ZOOMING_IN_DURATION, Interpolation.smooth);
-            game.schedule(ZOOMING_IN_DURATION, () -> {
-                game.setState(new GameState(game));
-            });
-        }
-
         game.cameraman.apply(game.getWorldViewport().getCamera());
     }
 
@@ -97,5 +90,27 @@ public final class IntroState extends State {
         }
 
         uiBatch.end();
+    }
+
+    @Override
+    public boolean keyUp(int keycode) {
+        if (keycode == Input.Keys.F5) {
+            game.level = new Level(1, System.currentTimeMillis());
+            return true;
+        }
+        if (keycode == Input.Keys.F6) {
+            game.level = new Level((int) (System.currentTimeMillis() % 100), System.currentTimeMillis());
+            return true;
+        }
+
+        if (!zoomingIn) {
+            zoomingIn = true;
+            game.cameraman.next(game.CAMERA_SHOT_PLAYER_VIEW, ZOOMING_IN_DURATION, Interpolation.smooth);
+            game.schedule(ZOOMING_IN_DURATION, () -> {
+                game.setState(new GameState(game));
+            });
+            return true;
+        }
+        return super.keyUp(keycode);
     }
 }
