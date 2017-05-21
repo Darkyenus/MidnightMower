@@ -80,6 +80,7 @@ public final class GameState extends State {
 
     private boolean engineRunning = false;
     private float levelTime = 0f;
+    private float timeSinceEngineStall = -1f;
 
     public GameState(Game game) {
         super(game);
@@ -120,14 +121,39 @@ public final class GameState extends State {
 
             cutGrassParticles.update(delta);
 
+            if (timeSinceEngineStall != -1f) {
+                timeSinceEngineStall += delta;
+            }
+
+            final float playerSpeed;
+            if (engineRunning) {
+                playerSpeed = level.playerSpeed;
+            } else if (timeSinceEngineStall >= 0f) {
+                playerSpeed = level.playerSpeed * MathUtils.clamp( 1f - Interpolation.circleIn.apply(timeSinceEngineStall * 2f), 0f, 1f);
+            } else {
+                playerSpeed = 0f;
+            }
+
             if (engineRunning) {
                 levelTime  += delta;
+            }
+
+            if (particlesRemaining > 0 && timeSinceEngineStall < 1f) {
+                timeToNextParticle -= delta;
+                while (timeToNextParticle < 0f) {
+                    timeToNextParticle += 0.015f;
+                    particlesRemaining--;
+                    cutGrassParticles.spawn(1);
+                }
+            }
+
+            if (playerSpeed > 0f) {
 
                 final boolean forward = Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP);
                 final boolean backward = Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN);
                 if (forward ^ backward) {
                     // Could better handle discrete updates with rotation
-                    final Vector2 movement = new Vector2(0f, level.playerSpeed * delta * (forward ? 1f : -1f)).rotate(-level.playerAngle);
+                    final Vector2 movement = new Vector2(0f, playerSpeed * delta * (forward ? 1f : -0.7f)).rotate(-level.playerAngle);
                     final Level.CollisionData collisionData = level.playerMove(movement);
                     if (collisionData.grassCut) {
                         playGrassCutEffect();
@@ -154,14 +180,6 @@ public final class GameState extends State {
                     level.playerAngle += left ? turnAngle : -turnAngle;
                 }
 
-                if (particlesRemaining > 0) {
-                    timeToNextParticle -= delta;
-                    while (timeToNextParticle < 0f) {
-                        timeToNextParticle += 0.015f;
-                        particlesRemaining--;
-                        cutGrassParticles.spawn(1);
-                    }
-                }
 
                 nextStrayParticle -= delta;
                 while (nextStrayParticle < 0) {
@@ -169,24 +187,24 @@ public final class GameState extends State {
                     nextStrayParticle += MathUtils.random() * 0.9f;
                 }
 
-                if (level.remainingGrass == 0) {
-                    engineRunning = false;
+            }
 
-                    game.schedule(1f, () -> {
-                        soundEnd.play();
-                        game.startCrickets();
-                        soundIdle.stop(soundIdleLoopId);
-                        soundIdleLoopId = -1;
+            if (engineRunning && level.remainingGrass == 0) {
+                engineRunning = false;
+                timeSinceEngineStall = 0f;
 
-                        game.schedule(0.2f, () -> {
-                            game.disableHeadlights();
+                game.schedule(1f, () -> {
+                    soundEnd.play();
+                    game.startCrickets();
+                    soundIdle.stop(soundIdleLoopId);
+                    soundIdleLoopId = -1;
 
-                            game.schedule(2f, () -> {
-                                game.setState(new GameOverState(game, level.order));
-                            });
-                        });
+                    game.schedule(0.2f, () -> {
+                        game.disableHeadlights();
+
+                        game.schedule(2f, () -> game.setState(new GameOverState(game, level.order)));
                     });
-                }
+                });
             }
         }
 
