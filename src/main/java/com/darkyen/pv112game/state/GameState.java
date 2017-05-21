@@ -6,6 +6,7 @@ import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g3d.utils.FirstPersonCameraController;
+import com.badlogic.gdx.graphics.profiling.GLProfiler;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
@@ -80,11 +81,13 @@ public final class GameState extends State {
 
     private boolean engineRunning = false;
     private float levelTime = 0f;
+    private final float previousTotalLevelTime;
     private float timeSinceEngineStall = -1f;
 
-    public GameState(Game game) {
+    public GameState(Game game, float previousTotalLevelTime) {
         super(game);
         debugCameraController = new FirstPersonCameraController(game.getWorldViewport().getCamera());
+        this.previousTotalLevelTime = previousTotalLevelTime;
     }
 
     @Override
@@ -202,7 +205,7 @@ public final class GameState extends State {
                     game.schedule(0.2f, () -> {
                         game.disableHeadlights();
 
-                        game.schedule(2f, () -> game.setState(new GameOverState(game, level.order)));
+                        game.schedule(2f, () -> game.setState(new GameOverState(game, level.order, levelTime, levelTime + previousTotalLevelTime)));
                     });
                 });
             }
@@ -233,7 +236,18 @@ public final class GameState extends State {
 
         uiBatch.begin(uiViewport.getCamera(), true);
         if (debugDraw) {
-            glyphLayout.setText("FPS: "+Gdx.graphics.getFramesPerSecond()+"\nPos: "+level.playerPos+"\nTile: "+level.playerTileX+" "+level.playerTileY+"\nA: "+level.playerAngle+"\nGrass: "+level.remainingGrass+"\nPart: "+cutGrassParticles.getParticleCount(), Color.WHITE, Gdx.graphics.getWidth(), Align.left);
+            glyphLayout.setText("FPS: "+Gdx.graphics.getFramesPerSecond()
+                    +"\nPos: "+level.playerPos
+                    +"\nTile: "+level.playerTileX+" "+level.playerTileY
+                    +"\nA: "+level.playerAngle
+                    +"\nGrass: "+level.remainingGrass
+                    +"\nPart: "+cutGrassParticles.getParticleCount()
+                    +"\nGL Calls: "+ GLProfiler.calls
+                    +"\nGL DrawCalls: "+GLProfiler.drawCalls
+                    +"\nGL TextureBinds: "+GLProfiler.textureBindings
+                    +"\nGL ShaderSwitches: "+GLProfiler.shaderSwitches
+                    +"\nGL Elements: "+GLProfiler.vertexCount.total, Color.WHITE, Gdx.graphics.getWidth(), Align.left);
+            GLProfiler.reset();
             glyphLayout.draw(uiBatch, 0, Gdx.graphics.getHeight());
         } else {
             if (level.remainingGrass != 0) {
@@ -242,8 +256,8 @@ public final class GameState extends State {
             }
 
             final int seconds = (int)levelTime;
-            final int milliseconds = (int)(levelTime*1000f) % 1000;
-            glyphLayout.setText(String.format("%d.%03d", seconds, milliseconds), Color.GREEN, 0f, Align.left);
+            final int milliseconds = (int)((levelTime + previousTotalLevelTime)*1000f) % 1000;
+            glyphLayout.setText(String.format("{#AEA}%d.%03d{}", seconds, milliseconds), Color.GREEN, 0f, Align.left);
             glyphLayout.draw(uiBatch, Gdx.graphics.getWidth()/2f - glyphLayout.width/2f, Gdx.graphics.getHeight() - 10f);
         }
         uiBatch.end();

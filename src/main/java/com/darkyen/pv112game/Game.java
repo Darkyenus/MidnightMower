@@ -17,6 +17,7 @@ import com.darkyen.pv112game.game.Cameraman;
 import com.darkyen.pv112game.game.Level;
 import com.darkyen.pv112game.game.WorldRenderer;
 import com.darkyen.pv112game.gl.Environment;
+import com.darkyen.pv112game.gl.PointLight;
 import com.darkyen.pv112game.gl.Skybox;
 import com.darkyen.pv112game.gl.SpriteBatch;
 import com.darkyen.pv112game.state.IntroState;
@@ -37,8 +38,8 @@ public final class Game implements ApplicationListener {
     private Environment environment;
     private Skybox skybox;
 
-    private final Environment.PointLight leftHeadlight = new Environment.PointLight();
-    private final Environment.PointLight rightHeadlight = new Environment.PointLight();
+    private final PointLight leftHeadlight = new PointLight();
+    private final PointLight rightHeadlight = new PointLight();
 
     public final Cameraman cameraman = new Cameraman(Cameraman.NULL_CAMERA_SHOT);
 
@@ -119,7 +120,7 @@ public final class Game implements ApplicationListener {
     public void create() {
         // Debug
         GLProfiler.enable();
-        GLProfiler.listener = GLErrorListener.LOGGING_LISTENER;
+        GLProfiler.listener = GLErrorListener.THROWING_LISTENER;
 
         // Game
         level = new Level(1, System.currentTimeMillis());
@@ -136,7 +137,7 @@ public final class Game implements ApplicationListener {
         */
         environment.setAmbientLight(new Color(0.2f, 0.2f, 0.2f, 1f));
 
-        final Environment.PointLight moon = new Environment.PointLight();
+        final PointLight moon = new PointLight();
         moon.color.set(0.6f, 0.6f, 1f, 1f);
         moon.position.set(10_000f, 10_000f, 10_000f);
         moon.attenuation.setZero().x = 4f;
@@ -213,6 +214,8 @@ public final class Game implements ApplicationListener {
 
     @Override
     public void render() {
+        GLProfiler.enable();
+
         if (nextState != null) {
             if (this.state != null) {
                 this.state.end();

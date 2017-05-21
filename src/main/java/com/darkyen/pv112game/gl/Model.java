@@ -1,13 +1,18 @@
 package com.darkyen.pv112game.gl;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.VertexAttribute;
 import com.badlogic.gdx.graphics.VertexAttributes;
 import com.badlogic.gdx.graphics.g3d.model.data.*;
 import com.badlogic.gdx.math.Matrix3;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.FloatArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Collection;
 
 /**
  *
@@ -16,12 +21,30 @@ public final class Model {
 
     private static final Logger LOG = LoggerFactory.getLogger(Model.class);
 
+    private static final VertexAttributes INSTANCED_ATTRIBUTES = new VertexAttributes(
+            new VertexAttribute(VertexAttributes.Usage.Position, 4, GL20.GL_FLOAT, false, "modelMat1"),
+            new VertexAttribute(VertexAttributes.Usage.Position, 4, GL20.GL_FLOAT, false, "modelMat2"),
+            new VertexAttribute(VertexAttributes.Usage.Position, 4, GL20.GL_FLOAT, false, "modelMat3"),
+            new VertexAttribute(VertexAttributes.Usage.Position, 4, GL20.GL_FLOAT, false, "modelMat4"),
+            new VertexAttribute(VertexAttributes.Usage.Normal, 3, GL20.GL_FLOAT, false, "normalMat1"),
+            new VertexAttribute(VertexAttributes.Usage.Normal, 3, GL20.GL_FLOAT, false, "normalMat2"),
+            new VertexAttribute(VertexAttributes.Usage.Normal, 3, GL20.GL_FLOAT, false, "normalMat3")
+    );
+
+    public final boolean instanced;
+    private final int maxInstances;
     private final Mesh[] meshes;
     private final String[] meshIds;
     private final MeshPart[][] meshParts;
 
     private final Array<Node> nodes = new Array<>();
     private final Array<NodePart> nodeParts = new Array<>();
+
+    //region DrawCache
+    private final Matrix4 draw_transform = new Matrix4();
+    private final Matrix3 draw_normal = new Matrix3();
+    private final float[] drawInstanced_data;
+    //endregion
 
     private static String emptyIfNull(String s) {
         return s == null ? "" : s;
@@ -84,6 +107,15 @@ public final class Model {
     }
 
     public Model(ModelData modelData) {
+        this(modelData, 1, false);
+    }
+
+    /**
+     * @param maxInstances if >1, meshes will be drawn instanced */
+    public Model(ModelData modelData, int maxInstances, boolean staticInstances) {
+        this.instanced = maxInstances > 1;
+        this.maxInstances = maxInstances > 1 ? maxInstances : 1;
+        this.drawInstanced_data = instanced ? new float[(INSTANCED_ATTRIBUTES.vertexSize / 4) * maxInstances] : null;
         this.meshes = new Mesh[modelData.meshes.size];
         this.meshIds = new String[modelData.meshes.size];
         this.meshParts = new MeshPart[modelData.meshes.size][];
@@ -99,6 +131,8 @@ public final class Model {
 
             materials.add(new Material(modelMaterial.id, ambient, diffuse, specular, shininess, null));
         }
+
+        final VertexAttributes instancedAttributes = maxInstances > 1 ? INSTANCED_ATTRIBUTES : null;
 
         // Prepare meshes
         for (int meshI = 0; meshI < modelData.meshes.size; meshI++) {
@@ -119,9 +153,9 @@ public final class Model {
 
             // Prepare mesh
             final VertexAttributes vertexAttributes = new VertexAttributes(modelMesh.attributes);
-            final Mesh mesh = new Mesh(vertexAttributes,
+            final Mesh mesh = new Mesh(vertexAttributes, instancedAttributes,
                     true, modelMesh.vertices.length / (vertexAttributes.vertexSize / 4),
-                    true, indicesCount);
+                    true, indicesCount, staticInstances, maxInstances);
             // Fill vertices
             mesh.setVertices(modelMesh.vertices, 0, modelMesh.vertices.length);
             mesh.setIndexCount(indicesCount);
@@ -147,10 +181,9 @@ public final class Model {
         this.nodeParts.sort();
     }
 
-    private final Matrix4 draw_transform = new Matrix4();
-    private final Matrix3 draw_normal = new Matrix3();
-
     public void draw(Shader shader, Matrix4 transform) {
+        assert !instanced;
+
         Mesh lastBoundMesh = null;
         Node lastBoundNode = null;
 
@@ -184,6 +217,70 @@ public final class Model {
         if (lastBoundMesh != null) {
             lastBoundMesh.unbind();
         }
+    }
+
+    public void draw(Shader shader, Array<Matrix4> models) {
+        if (instanced) {
+            int offset = 0;
+            while (offset != models.size) {
+                int count = Math.min(models.size - offset, maxInstances);
+                drawInstanced(shader, models, offset, count);
+                offset += count;
+            }
+        } else {
+            for (Matrix4 model : models) {
+                draw(shader, model);
+            }
+        }
+    }
+
+    public void drawInstanced(Shader shader, Array<Matrix4> models, int modelOffset, int modelCount) {
+        assert instanced;
+
+        final float[] instancedData = this.drawInstanced_data;
+
+        // We need to set fresh material for each node part, but
+        Mesh lastBoundMesh = null;
+        Node lastBoundNode = null;
+
+        for (NodePart part : nodeParts) {
+            final Mesh mesh = meshes[part.meshPart.meshIndex];
+
+            if (part.node != lastBoundNode) {
+                if (lastBoundMesh != null) lastBoundMesh.unbind();
+                lastBoundMesh = mesh;
+                lastBoundNode = part.node;
+
+                // All nodes have equal transform, and we set it here, for all instances
+                int instancedDataI = 0;
+                for (int i = 0; i < modelCount; i++) {
+                    final Matrix4 modelMatRaw = models.get(modelOffset + i);
+                    final Matrix4 modelMat = draw_transform.set(modelMatRaw).mul(part.node.transform);
+                    final Matrix3 normalMat = draw_normal.set(modelMat).inv().transpose();
+
+                    System.arraycopy(modelMat.val, 0, instancedData, instancedDataI, 16);
+                    instancedDataI += 16;
+                    System.arraycopy(normalMat.val, 0, instancedData, instancedDataI, 9);
+                    instancedDataI += 9;
+                }
+
+                mesh.setInstanceData(instancedData, 0, instancedDataI);
+                mesh.bind(shader);
+            }
+
+            // All node parts have different material
+            final Shader.Uniform materialBlock = shader.uniformBlock("Material");
+            final Material material = part.material;
+            material.bind(materialBlock, 1);
+
+            final MeshPart meshPart = part.meshPart;
+            mesh.renderInstanced(meshPart.primitive, meshPart.indicesOffset, meshPart.indicesCount, modelCount);
+        }
+
+        if (lastBoundMesh != null) {
+            lastBoundMesh.unbind();
+        }
+
     }
 
     private static class MeshPart implements Comparable<MeshPart> {

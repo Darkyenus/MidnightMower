@@ -57,7 +57,7 @@ public final class Cameraman {
         if (nextDurations.size > 0) {
             return time / nextDurations.first();
         }
-        return 0f;
+        return 1f;
     }
 
     public void apply(Camera camera) {

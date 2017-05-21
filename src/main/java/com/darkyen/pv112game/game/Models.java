@@ -30,7 +30,7 @@ public final class Models {
     public static Model load(String name) {
         final ModelData modelData = MODEL_LOADER.loadModelData(Gdx.files.internal("models/" + name + ".g3dj"), null);
         fixMaterials(modelData);
-        final Model model = new Model(modelData);
+        final Model model = new Model(modelData, 256, false);
         LOADED_MODELS.add(model);
         return model;
     }

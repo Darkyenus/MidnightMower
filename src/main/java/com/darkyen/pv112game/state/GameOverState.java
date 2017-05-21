@@ -18,10 +18,14 @@ import com.darkyen.pv112game.gl.SpriteBatch;
 public final class GameOverState extends State {
 
     private final int lastCompleteLevel;
+    private final float levelTime;
+    private final float previousTotalLevelTime;
 
-    public GameOverState(Game game, int lastCompleteLevel) {
+    public GameOverState(Game game, int lastCompleteLevel, float levelTime, float previousTotalLevelTime) {
         super(game);
         this.lastCompleteLevel = lastCompleteLevel;
+        this.levelTime = levelTime;
+        this.previousTotalLevelTime = previousTotalLevelTime;
     }
 
     private float time = 0f;
@@ -46,7 +50,7 @@ public final class GameOverState extends State {
         final GlyphLayout glyphs = game.getSharedGlyphLayout();
         final Color white = Color.WHITE.cpy();
         white.a = MathUtils.clamp(time * 0.5f, 0f, 1f);
-        glyphs.setText("Level "+lastCompleteLevel+" completed!", white, Gdx.graphics.getWidth(), Align.center);
+        glyphs.setText("Level "+lastCompleteLevel+" completed in {#AEA}"+Math.round(levelTime)+"{} seconds!", white, Gdx.graphics.getWidth(), Align.center);
         glyphs.draw(uiBatch, 0f, Gdx.graphics.getHeight() / 4 * 3 + glyphs.height/2);
 
         if (time > 2f) {
@@ -64,7 +68,7 @@ public final class GameOverState extends State {
             goingToNextLevel = true;
             game.level = new Level(lastCompleteLevel + 1, System.currentTimeMillis());
             game.cameraman.next(game.CAMERA_SHOT_PLAYER_VIEW, 2f, Interpolation.smooth);
-            game.schedule(2f, () -> game.setState(new GameState(game)));
+            game.schedule(2f, () -> game.setState(new GameState(game, previousTotalLevelTime + levelTime)));
             return true;
         }
         return false;

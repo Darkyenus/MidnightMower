@@ -7,6 +7,8 @@ import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
+import com.badlogic.gdx.utils.ObjectMap;
+import com.badlogic.gdx.utils.Pool;
 
 import java.nio.ByteBuffer;
 
@@ -16,20 +18,29 @@ import java.nio.ByteBuffer;
 public final class Environment implements Disposable {
 
     private final Camera camera;
+
     private final Shader shader;
-    private final UniformBuffer environmentUniforms;
     private final Shader.Uniform environmentBlock;
+    private final Shader shaderInstanced;
+    private final Shader.Uniform environmentBlockInstanced;
+
+    private final UniformBuffer environmentUniforms;
 
     private final Color ambientLight = new Color(0.9f, 0.9f, 0.9f, 1f);
     private final Array<PointLight> pointLights = new Array<>();
     private boolean dirty = true;
 
+    private final ObjectMap<Model, Array<Matrix4>> batchedModels = new ObjectMap<>();
+
     public Environment(Camera camera) {
         this.camera = camera;
-        this.shader = new Shader(Gdx.files.internal("shaders/world-vert.glsl"), Gdx.files.internal("shaders/world-frag.glsl"));
-
         environmentUniforms = new UniformBuffer();
+
+        this.shader = new Shader(Gdx.files.internal("shaders/world-vert.glsl"), Gdx.files.internal("shaders/world-frag.glsl"));
         environmentBlock = shader.uniformBlock("Environment");
+
+        this.shaderInstanced = new Shader(Gdx.files.internal("shaders/world-vert-inst.glsl"), Gdx.files.internal("shaders/world-frag.glsl"));
+        environmentBlockInstanced = shaderInstanced.uniformBlock("Environment");
     }
 
     public void setAmbientLight(Color color) {
@@ -51,13 +62,12 @@ public final class Environment implements Disposable {
             "pointLightPosition[0]", "pointLightColor[0]", "pointLightAttenuation[0]", "pointLightDirection[0]"};
     private final int[] environmentUniformOffsets = new int[environmentUniformNames.length];
 
-    public void begin() {
+    private void bindShader(Shader shader, Shader.Uniform environmentBlock, boolean dirty) {
         shader.bind();
         shader.uniform("eye_position").set(camera.position);
         shader.uniform("projectionMat").set(camera.combined);
 
         if (dirty) {
-            dirty = false;
             final int[] offsets = this.environmentUniformOffsets;
             final ByteBuffer data = environmentUniforms.prepareData(environmentBlock, environmentUniformNames, offsets, null);
 
@@ -94,30 +104,60 @@ public final class Environment implements Disposable {
         environmentUniforms.bind(environmentBlock, 0);
     }
 
-    private final Matrix4 draw_transform = new Matrix4();
+    public void begin() {
+        bindShader(shader, environmentBlock, dirty);
+        dirty = false;
+    }
 
     public void draw(Model model, Vector3 position) {
-        final Matrix4 transform = draw_transform.setToTranslation(position);
-        model.draw(shader, transform);
+        final Matrix4 transform = MATRIX_4_POOL.obtain().setToTranslation(position);
+        draw(model, transform);
     }
 
     public void draw(Model model, Vector3 position, float yDegrees) {
-        final Matrix4 transform = draw_transform.idt();
+        final Matrix4 transform = MATRIX_4_POOL.obtain().idt();
         transform.translate(position);
         transform.rotate(Vector3.Y, yDegrees);
-        model.draw(shader, transform);
+        draw(model, transform);
     }
 
     public void draw(Model model, Vector3 position, float yDegrees, float scale) {
-        final Matrix4 transform = draw_transform.idt();
+        final Matrix4 transform = MATRIX_4_POOL.obtain().idt();
         transform.translate(position);
         transform.rotate(Vector3.Y, yDegrees);
         transform.scale(scale, scale, scale);
-        model.draw(shader, transform);
+        draw(model, transform);
+    }
+
+    private void draw(Model model, Matrix4 pooledTransform) {
+        if (model.instanced) {
+            Array<Matrix4> models = batchedModels.get(model);
+            if (models == null) {
+                models = ARRAY_MATRIX_4_POOL.obtain();
+                batchedModels.put(model, models);
+            }
+            models.add(pooledTransform);
+        } else {
+            model.draw(shader, pooledTransform);
+            MATRIX_4_POOL.free(pooledTransform);
+        }
     }
 
     public void end() {
         shader.unbind();
+
+        if (batchedModels.size != 0) {
+            bindShader(shaderInstanced, environmentBlockInstanced, false);
+
+            for (ObjectMap.Entry<Model, Array<Matrix4>> entry : batchedModels.entries()) {
+                entry.key.draw(shaderInstanced, entry.value);
+                MATRIX_4_POOL.freeAll(entry.value);
+                entry.value.size = 0;
+                ARRAY_MATRIX_4_POOL.free(entry.value);
+            }
+            batchedModels.clear();
+            shaderInstanced.unbind();
+        }
     }
 
     public void dispose() {
@@ -125,11 +165,16 @@ public final class Environment implements Disposable {
         shader.dispose();
     }
 
-    public static final class PointLight {
-        public final Color color = new Color(1f, 1f, 1f, 1f);
-        public final Vector3 position = new Vector3();
-        public final Vector3 attenuation = new Vector3(0.1f, 0.3f, 0.02f);
-        public final Vector3 direction = new Vector3(0f, 0f, 0f);
-        public float directionCutoff = -5f;
-    }
+    private static final Pool<Matrix4> MATRIX_4_POOL = new Pool<Matrix4>() {
+        @Override
+        protected Matrix4 newObject() {
+            return new Matrix4();
+        }
+    };
+    private static final Pool<Array<Matrix4>> ARRAY_MATRIX_4_POOL = new Pool<Array<Matrix4>>() {
+        @Override
+        protected Array<Matrix4> newObject() {
+            return new Array<>(false, 64, Matrix4.class);
+        }
+    };
 }

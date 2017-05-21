@@ -4,7 +4,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Interpolation;
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Align;
 import com.darkyen.pv112game.Game;
@@ -102,12 +101,16 @@ public final class IntroState extends State {
             game.level = new Level((int) (System.currentTimeMillis() % 100), System.currentTimeMillis());
             return true;
         }
+        if (keycode == Input.Keys.F7) {
+            game.level = new Level(66, 66);
+            return true;
+        }
 
         if (!zoomingIn) {
             zoomingIn = true;
             game.cameraman.next(game.CAMERA_SHOT_PLAYER_VIEW, ZOOMING_IN_DURATION, Interpolation.smooth);
             game.schedule(ZOOMING_IN_DURATION, () -> {
-                game.setState(new GameState(game));
+                game.setState(new GameState(game, 0));
             });
             return true;
         }

@@ -27,7 +27,7 @@ public final class Level {
 
     public Level(int order, long seed) {
         this.order = order;
-        final LevelGenerator.LevelData levelData = LevelGenerator.generateLevel(50 + order * 20, seed);
+        final LevelGenerator.LevelData levelData = LevelGenerator.generateLevel(5 + order * 20, seed);
         this.width = levelData.width;
         this.height = levelData.height;
         this.playerTileX = levelData.playerX;

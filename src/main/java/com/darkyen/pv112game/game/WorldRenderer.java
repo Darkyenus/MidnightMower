@@ -30,9 +30,9 @@ public final class WorldRenderer {
     public static void render(Level level, Environment environment) {
         final Vector3 position = new Vector3();
 
-        for (int x = 0; x < level.width; x++) {
-            for (int y = 0; y < level.height; y++) {
-                final boolean traversable = level.tileTraversable[x][y];
+        for (int x = -1; x <= level.width; x++) {
+            for (int y = -1; y <= level.height; y++) {
+                final boolean traversable = level.traversable(x, y);;
 
                 if (traversable) {
                     position.x = x + 0.5f;

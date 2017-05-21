@@ -21,11 +21,13 @@ import java.nio.ShortBuffer;
 public final class Mesh implements Disposable {
 
     public final VertexAttributes attributes;
+    public final VertexAttributes instancedAttributes;
+
+    /** Locations of attributes + instancedAttributes */
+    private final int[] attributeLocations;
+    private int attributeLocationsShaderProgram = -1;
 
     //region Vertex data
-    private final int[] vertexAttributeLocations;
-    private int vertexAttributeLocationsShaderProgram = -1;
-
     private final FloatBuffer vertexBuffer;
     /** Managed by bind() */
     private final ByteBuffer vertexByteBuffer;
@@ -40,16 +42,30 @@ public final class Mesh implements Disposable {
     /** Managed by bind() */
     private final ByteBuffer indexByteBuffer;
     private int indexBufferHandle;
-    private boolean indexBufferDirty = true;
+    private boolean indexBufferDirty = false;
     private final int indexBufferUsage;
     //endregion
 
+    //region Instancing
+    private final boolean instanced;
+    private final FloatBuffer instancedBuffer;
+    /** Managed by bind() */
+    private final ByteBuffer instancedByteBuffer;
+    private int instancedBufferHandle;
+    private boolean instancedBufferDirty = false;
+    private final int instancedBufferUsage;
+    //endregion
+
     public Mesh (VertexAttributes attributes, boolean staticVertices, int maxVertices, boolean staticIndices, int maxIndices) {
+        this(attributes, null, staticVertices, maxVertices, staticIndices, maxIndices, true, 0);
+    }
+
+    public Mesh (VertexAttributes attributes, VertexAttributes instancedAttributes, boolean staticVertices, int maxVertices, boolean staticIndices, int maxIndices, boolean staticInstances, int maxInstances) {
         // Vertex init
         this.attributes = attributes;
-        this.vertexAttributeLocations = new int[attributes.size()];
+        this.attributeLocations = new int[attributes.size() + (instancedAttributes == null ? 0 : instancedAttributes.size())];
 
-        vertexByteBuffer = BufferUtils.newUnsafeByteBuffer(this.attributes.vertexSize * maxVertices);
+        vertexByteBuffer = BufferUtils.newUnsafeByteBuffer(attributes.vertexSize * maxVertices);
         vertexBuffer = vertexByteBuffer.asFloatBuffer();
         vertexBuffer.flip();
         vertexByteBuffer.flip();
@@ -75,6 +91,24 @@ public final class Mesh implements Disposable {
             indexByteBuffer.flip();
             indexBufferHandle = Gdx.gl20.glGenBuffer();
             indexBufferUsage = staticIndices ? GL20.GL_STATIC_DRAW : GL20.GL_DYNAMIC_DRAW;
+        }
+
+        // Instancing init
+        this.instancedAttributes = instancedAttributes;
+        if (instancedAttributes == null) {
+            instanced = false;
+            instancedBuffer = null;
+            instancedByteBuffer = null;
+            instancedBufferHandle = -1;
+            instancedBufferUsage = -1;
+        } else {
+            instanced = true;
+            instancedByteBuffer = BufferUtils.newUnsafeByteBuffer(instancedAttributes.vertexSize * maxInstances);
+            instancedBuffer = instancedByteBuffer.asFloatBuffer();
+            instancedByteBuffer.flip();//TODO Flips necessary?
+            instancedBuffer.flip();
+            instancedBufferHandle = Gdx.gl20.glGenBuffer();
+            instancedBufferUsage = staticInstances ? GL20.GL_STATIC_DRAW : GL20.GL_DYNAMIC_DRAW;
         }
     }
 
@@ -140,29 +174,54 @@ public final class Mesh implements Disposable {
         indexByteBuffer.position(0);
     }
 
+    public void setInstanceData (float[] data, int offset, int count) {
+        assert instanced;
+        instancedBufferDirty = true;
+        BufferUtils.copy(data, instancedByteBuffer, count, offset << 2);
+        instancedBuffer.position(0);
+        instancedBuffer.limit(count);
+    }
+
+    public void setInstanceDataCount(int floatCount) {
+        assert instanced;
+        instancedBufferDirty = true;
+
+        instancedBuffer.position(0);
+        instancedBuffer.limit(floatCount);
+    }
+
+    public void putInstanceData (int targetOffset, float[] data, int offset, int count) {
+        assert instanced;
+        instancedBufferDirty = true;
+
+        instancedByteBuffer.position(targetOffset * 4);
+        BufferUtils.copy(data, offset, instancedByteBuffer, count);
+        instancedByteBuffer.position(0);
+    }
+
     public void bind (Shader shader) {
         final GL30 gl = Gdx.gl30;
 
         gl.glBindVertexArray(vaoHandle);
-        gl.glBindBuffer(GL20.GL_ARRAY_BUFFER, vertexBufferHandle);
-        if (indexBufferHandle != -1) gl.glBindBuffer(GL20.GL_ELEMENT_ARRAY_BUFFER, indexBufferHandle);
 
         // VAO Check
-        if (vertexAttributeLocationsShaderProgram != shader.getProgram()) {
+        if (attributeLocationsShaderProgram != shader.getProgram()) {
             // Disable attributes if bound
-            if (vertexAttributeLocationsShaderProgram != -1) {
-                for (int location : vertexAttributeLocations) {
+            if (attributeLocationsShaderProgram != -1) {
+                for (int location : attributeLocations) {
                     if (location == -1) continue;
                     gl.glDisableVertexAttribArray(location);
                 }
             }
 
-            vertexAttributeLocationsShaderProgram = shader.getProgram();
+            attributeLocationsShaderProgram = shader.getProgram();
             // Enable and setup attributes
-            for (int i = 0; i < vertexAttributeLocations.length; i++) {
-                final VertexAttribute attribute = attributes.get(i);
+            int attribLocationIndex = 0;
+            // Standard attributes
+            gl.glBindBuffer(GL20.GL_ARRAY_BUFFER, vertexBufferHandle);
+            for (VertexAttribute attribute : attributes) {
                 final int location = gl.glGetAttribLocation(shader.getProgram(), attribute.alias);
-                vertexAttributeLocations[i] = location;
+                attributeLocations[attribLocationIndex++] = location;
                 if (location == -1) {
                     continue;
                 }
@@ -170,20 +229,53 @@ public final class Mesh implements Disposable {
                 gl.glEnableVertexAttribArray(location);
                 gl.glVertexAttribPointer(location, attribute.numComponents, attribute.type, attribute.normalized, attributes.vertexSize, attribute.offset);
             }
+
+            // Instanced attributes
+            if (instanced) {
+                gl.glBindBuffer(GL20.GL_ARRAY_BUFFER, instancedBufferHandle);
+                for (VertexAttribute instancedAttribute : instancedAttributes) {
+                    final int location = gl.glGetAttribLocation(shader.getProgram(), instancedAttribute.alias);
+                    attributeLocations[attribLocationIndex++] = location;
+                    if (location == -1) {
+                        continue;
+                    }
+
+                    gl.glEnableVertexAttribArray(location);
+                    gl.glVertexAttribPointer(location, instancedAttribute.numComponents, instancedAttribute.type, instancedAttribute.normalized, instancedAttributes.vertexSize, instancedAttribute.offset);
+                    gl.glVertexAttribDivisor(location, 1);
+                }
+            }
+
+            gl.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
         }
 
         // Vertices check
         if (vertexBufferDirty) {
             vertexByteBuffer.limit(vertexBuffer.limit() * 4);
+            gl.glBindBuffer(GL20.GL_ARRAY_BUFFER, vertexBufferHandle);
             gl.glBufferData(GL20.GL_ARRAY_BUFFER, vertexByteBuffer.limit(), vertexByteBuffer, vertexBufferUsage);
+            gl.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
             vertexBufferDirty = false;
         }
 
-        // Indices check
-        if (indexBufferDirty) {
-            indexByteBuffer.limit(indexBuffer.limit() * 2);
-            gl.glBufferData(GL20.GL_ELEMENT_ARRAY_BUFFER, indexByteBuffer.limit(), indexByteBuffer, indexBufferUsage);
-            indexBufferDirty = false;
+        // Instanced check
+        if (instancedBufferDirty) {
+            instancedByteBuffer.limit(instancedBuffer.limit() * 4);
+            gl.glBindBuffer(GL20.GL_ARRAY_BUFFER, instancedBufferHandle);
+            gl.glBufferData(GL20.GL_ARRAY_BUFFER, instancedByteBuffer.limit(), instancedByteBuffer, instancedBufferUsage);
+            gl.glBindBuffer(GL20.GL_ARRAY_BUFFER, 0);
+            instancedBufferDirty = false;
+        }
+
+        // Indices check & bind
+        if (indexBufferHandle != -1) {
+            gl.glBindBuffer(GL20.GL_ELEMENT_ARRAY_BUFFER, indexBufferHandle);
+
+            if (indexBufferDirty) {
+                indexByteBuffer.limit(indexBuffer.limit() * 2);
+                gl.glBufferData(GL20.GL_ELEMENT_ARRAY_BUFFER, indexByteBuffer.limit(), indexByteBuffer, indexBufferUsage);
+                indexBufferDirty = false;
+            }
         }
     }
 
@@ -192,6 +284,7 @@ public final class Mesh implements Disposable {
     }
 
     public void render (int primitiveType, int offset, int count) {
+        assert !instanced;
         assert offset >= 0;
         assert count > 0;
         assert indexBuffer == null || offset < getIndexCount();
@@ -202,6 +295,21 @@ public final class Mesh implements Disposable {
             Gdx.gl30.glDrawElements(primitiveType, count, GL20.GL_UNSIGNED_SHORT, offset * 2);
         } else {
             Gdx.gl30.glDrawArrays(primitiveType, offset, count);
+        }
+    }
+
+    public void renderInstanced (int primitiveType, int offset, int count, int instances) {
+        assert instanced;
+        assert offset >= 0;
+        assert count > 0;
+        assert indexBuffer == null || offset < getIndexCount();
+        assert indexBuffer == null || offset + count <= getIndexCount();
+        assert !vertexBufferDirty;
+        assert !indexBufferDirty;
+        if (indexBufferHandle == -1) {
+            Gdx.gl30.glDrawArraysInstanced(primitiveType, offset, count, instances);
+        } else {
+            Gdx.gl30.glDrawElementsInstanced(primitiveType, count, GL20.GL_UNSIGNED_SHORT, offset * 2, instances);
         }
     }
 
