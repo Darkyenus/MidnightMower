@@ -72,19 +72,21 @@ float StableStarField( in vec3 samplePoint, float threshold )
 }
 //-------------------------------------------------------------------------------------------------------
 
-//-------------------------------------------------------------------------------------------------------
-// http://www.neilmendoza.com/glsl-rotation-about-an-arbitrary-axis/
-mat3 rotationMatrix(vec3 axis, float angle) {
-    axis = normalize(axis);
-    float s = sin(angle);
+mat3 rotateY(float angle) {
+	float s = sin(angle);
     float c = cos(angle);
-    float oc = 1.0 - c;
-
-    return mat3(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,
-                oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,
-                oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c);
+    return mat3(c, 0, s,
+                0, 1, 0,
+                -s, 0, c);
 }
-//-------------------------------------------------------------------------------------------------------
+
+mat3 rotateZ(float angle) {
+	float s = sin(angle);
+    float c = cos(angle);
+    return mat3(c, -s, 0,
+                s, c, 0,
+                0, 0, 1);
+}
 
 const float PI = 3.1415926536;
 const float TAU = 6.2831853072;
@@ -125,7 +127,7 @@ void main() {
 
 	vec2 moonAngle = toSpericalAngle(moonPos);
 
-	vec3 projectedRay = rotationMatrix(vec3(0.0, 0.0, 1.0), -moonAngle.y) * rotationMatrix(vec3(0.0, 1.0, 0.0), -moonAngle.x) * ray;
+	vec3 projectedRay = rotateZ(-moonAngle.y) * rotateY(-moonAngle.x) * ray;
 	vec2 moonUV = projectedRay.xz;
 
 	if (length(moonUV) < moonSize && projectedRay.y > 0.0) {
