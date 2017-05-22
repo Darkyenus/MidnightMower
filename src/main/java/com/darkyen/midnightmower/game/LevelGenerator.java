@@ -1,7 +1,6 @@
-package com.darkyen.pv112game.game;
+package com.darkyen.midnightmower.game;
 
 import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.LongArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

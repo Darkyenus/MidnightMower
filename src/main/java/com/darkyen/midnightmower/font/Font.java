@@ -1,10 +1,10 @@
-package com.darkyen.pv112game.font;
+package com.darkyen.midnightmower.font;
 
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.IntMap;
-import com.darkyen.pv112game.gl.Texture;
+import com.darkyen.midnightmower.gl.Texture;
 
 import java.io.DataInputStream;
 

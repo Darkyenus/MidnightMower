@@ -1,10 +1,9 @@
-package com.darkyen.pv112game;
+package com.darkyen.midnightmower;
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -16,7 +15,7 @@ public final class Main {
         configuration.useOpenGL3(true, 3, 3);
         configuration.setResizable(true);
         configuration.useVsync(false);
-        configuration.setTitle("PV112 Game");
+        configuration.setTitle("Midnight Mower");
 
         final List<String> arguments = Arrays.asList(args);
         if (arguments.contains("nosound")) {

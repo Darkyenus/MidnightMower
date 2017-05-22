@@ -1,4 +1,4 @@
-package com.darkyen.pv112game.gl;
+package com.darkyen.midnightmower.gl;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;

@@ -1,8 +1,8 @@
-package com.darkyen.pv112game.game;
+package com.darkyen.midnightmower.game;
 
 import com.badlogic.gdx.math.Vector3;
-import com.darkyen.pv112game.gl.Environment;
-import com.darkyen.pv112game.gl.Model;
+import com.darkyen.midnightmower.gl.Environment;
+import com.darkyen.midnightmower.gl.Model;
 
 /**
  *

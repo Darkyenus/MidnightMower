@@ -1,4 +1,4 @@
-package com.darkyen.pv112game.gl;
+package com.darkyen.midnightmower.gl;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -8,11 +8,8 @@ import com.badlogic.gdx.graphics.g3d.model.data.*;
 import com.badlogic.gdx.math.Matrix3;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.FloatArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Collection;
 
 /**
  *

@@ -1,4 +1,4 @@
-package com.darkyen.pv112game.game;
+package com.darkyen.midnightmower.game;
 
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;

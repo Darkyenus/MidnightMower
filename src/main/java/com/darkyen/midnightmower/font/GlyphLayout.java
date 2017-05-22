@@ -1,12 +1,12 @@
 
-package com.darkyen.pv112game.font;
+package com.darkyen.midnightmower.font;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Colors;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.*;
-import com.darkyen.pv112game.gl.SpriteBatch;
+import com.darkyen.midnightmower.gl.SpriteBatch;
 
 /**
  *

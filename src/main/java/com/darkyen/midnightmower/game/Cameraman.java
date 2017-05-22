@@ -1,4 +1,4 @@
-package com.darkyen.pv112game.game;
+package com.darkyen.midnightmower.game;
 
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.math.Interpolation;

@@ -1,4 +1,4 @@
-package com.darkyen.pv112game.state;
+package com.darkyen.midnightmower.state;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -6,11 +6,11 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Align;
-import com.darkyen.pv112game.Game;
-import com.darkyen.pv112game.State;
-import com.darkyen.pv112game.font.GlyphLayout;
-import com.darkyen.pv112game.game.Level;
-import com.darkyen.pv112game.gl.SpriteBatch;
+import com.darkyen.midnightmower.Game;
+import com.darkyen.midnightmower.State;
+import com.darkyen.midnightmower.font.GlyphLayout;
+import com.darkyen.midnightmower.game.Level;
+import com.darkyen.midnightmower.gl.SpriteBatch;
 
 /**
  *
@@ -62,7 +62,7 @@ public final class IntroState extends State {
         if (zoomingIn) {
             white.a = Interpolation.smooth.apply(1f - game.cameraman.getTransitionProgress());
         }
-        glyphs.setText("{DARK_GRAY}Midnight{} {FOREST}Rider", white, Gdx.graphics.getWidth(), Align.center);
+        glyphs.setText("{DARK_GRAY}Midnight{} {FOREST}Mower", white, Gdx.graphics.getWidth(), Align.center);
         glyphs.draw(uiBatch, 0f, Gdx.graphics.getHeight() / 4 * 3 + glyphs.height/2);
 
         float pressAnyKeyAlpha = 0f;

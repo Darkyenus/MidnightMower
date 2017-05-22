@@ -1,7 +1,6 @@
-package com.darkyen.pv112game;
+package com.darkyen.midnightmower;
 
 import com.badlogic.gdx.InputAdapter;
-import com.darkyen.pv112game.gl.Environment;
 
 /**
  *

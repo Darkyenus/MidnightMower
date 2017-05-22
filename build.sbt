@@ -2,7 +2,7 @@ import java.util
 
 import com.darkyen.resourcepacker.{PackingOperation, PackingOperationKt}
 
-name := "PV112 Game"
+name := "MidnightMower"
 
 version := "0.1-SNAPSHOT"
 
@@ -41,4 +41,4 @@ TaskKey[Unit]("packResources") := {
   ResourcePacker.resourcePack(new PackingOperation("./resources", "./assets", util.Arrays.asList(PackingOperationKt.getPreferSymlinks.to(true))))
 }
 
-mainClass in assembly := Some("com.darkyen.pv112game.Main")
+mainClass in assembly := Some("com.darkyen.midnightmower.Main")

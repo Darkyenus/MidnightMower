@@ -1,4 +1,4 @@
-package com.darkyen.pv112game.game;
+package com.darkyen.midnightmower.game;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g3d.loader.G3dModelLoader;
@@ -6,7 +6,7 @@ import com.badlogic.gdx.graphics.g3d.model.data.ModelData;
 import com.badlogic.gdx.graphics.g3d.model.data.ModelMaterial;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.JsonReader;
-import com.darkyen.pv112game.gl.Model;
+import com.darkyen.midnightmower.gl.Model;
 
 /**
  *
