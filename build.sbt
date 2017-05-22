@@ -41,4 +41,10 @@ TaskKey[Unit]("packResources") := {
   ResourcePacker.resourcePack(new PackingOperation("./resources", "./assets", util.Arrays.asList(PackingOperationKt.getPreferSymlinks.to(true))))
 }
 
+fullClasspath in assembly += file("./assets")
+
+TaskKey[Unit]("packResourcesDist") := {
+  ResourcePacker.resourcePack(new PackingOperation("./resources", "./assets"))
+}
+
 mainClass in assembly := Some("com.darkyen.midnightmower.Main")
