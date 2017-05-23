@@ -33,7 +33,7 @@ public final class GameOverState extends State {
 
     @Override
     public void begin() {
-        game.cameraman.next(new Cameraman.StaticCameraShot(0f, 5f, 0f, 1f, 2f, 0f), 2f, Interpolation.smooth);
+        game.cameraman.next(new Cameraman.StaticCameraShot(0f, 5f, 0f, 2f, 2f, 0f), 2f, Interpolation.smooth);
     }
 
     @Override

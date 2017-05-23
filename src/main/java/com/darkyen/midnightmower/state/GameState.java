@@ -255,7 +255,7 @@ public final class GameState extends State {
                 glyphLayout.draw(uiBatch, 10f, Gdx.graphics.getHeight() - 10f);
             }
 
-            final int seconds = (int)levelTime;
+            final int seconds = (int)(levelTime + previousTotalLevelTime);
             final int milliseconds = (int)((levelTime + previousTotalLevelTime)*1000f) % 1000;
             glyphLayout.setText(String.format("{#AEA}%d.%03d{}", seconds, milliseconds), Color.GREEN, 0f, Align.left);
             glyphLayout.draw(uiBatch, Gdx.graphics.getWidth()/2f - glyphLayout.width/2f, Gdx.graphics.getHeight() - 10f);
